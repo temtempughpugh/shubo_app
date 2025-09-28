@@ -75,3 +75,4 @@ export default defineConfig([
 # shubo_management
 # shubo_app
 # shubo_app
+# shubo_app
