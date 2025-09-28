@@ -72,3 +72,4 @@ export default defineConfig([
 ])
 ```
 # shubo_management
+# shubo_management
