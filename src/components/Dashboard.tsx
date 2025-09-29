@@ -5,6 +5,8 @@ import type {
   MergedShuboData
 } from '../utils/types';
 import { STORAGE_KEYS } from '../utils/types';
+import ShuboDetailExpansion from './ShuboDetailExpansion';
+import { generateDailyRecords } from '../utils/dataUtils';
 
 interface DashboardProps {
   dataContext: {
@@ -59,6 +61,7 @@ interface AnalysisInput {
 export default function Dashboard({ dataContext }: DashboardProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [expandedShubo, setExpandedShubo] = useState<number | null>(null);
   
   const [dailyEnvironment, setDailyEnvironment] = useState<DailyEnvironment>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.DAILY_ENVIRONMENT);
@@ -166,6 +169,24 @@ export default function Dashboard({ dataContext }: DashboardProps) {
     
     const match = tankConversions.find(conv => conv.kensyaku === kensyaku);
     return match ? match.capacity : null;
+  };
+
+  const handleShuboClick = (shuboNumber: number) => {
+    setExpandedShubo(expandedShubo === shuboNumber ? null : shuboNumber);
+  };
+
+  const getShuboRecords = (shubo: MergedShuboData): DailyRecordData[] => {
+    const existing = dataContext.getDailyRecords(shubo.primaryNumber);
+    
+    if (existing.length > 0) {
+      return existing;
+    }
+    
+    return generateDailyRecords(shubo);
+  };
+
+  const handleUpdateRecord = (record: DailyRecordData) => {
+    dataContext.updateDailyRecord(record);
   };
 
   const todayWorks = useMemo(() => {
@@ -509,32 +530,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                         const waterAmount = shubo.recipeData.water;
                         const lacticAcidAmount = shubo.recipeData.lacticAcid;
                         
-                        // デバッグログ
-                        if (isDual) {
-                          console.log('=== 2個酛デバッグ ===');
-                          console.log('酒母:', shubo.displayName);
-                          console.log('primaryNumber:', shubo.primaryNumber);
-                          console.log('secondaryNumber:', shubo.secondaryNumber);
-                          console.log('合計 water:', waterAmount);
-                          console.log('合計 lacticAcid:', lacticAcidAmount);
-                          console.log('configuredShuboData 件数:', dataContext.configuredShuboData?.length);
-                          
-                          const primary = dataContext.configuredShuboData?.find(s => s.shuboNumber === shubo.primaryNumber);
-                          const secondary = dataContext.configuredShuboData?.find(s => s.shuboNumber === shubo.secondaryNumber);
-                          
-                          console.log('primary found:', !!primary);
-                          console.log('secondary found:', !!secondary);
-                          
-                          if (primary) {
-                            console.log('primary water:', primary.recipeData.water);
-                            console.log('primary lacticAcid:', primary.recipeData.lacticAcid);
-                          }
-                          if (secondary) {
-                            console.log('secondary water:', secondary.recipeData.water);
-                            console.log('secondary lacticAcid:', secondary.recipeData.lacticAcid);
-                          }
-                        }
-                        
                         let waterDisplay = `${waterAmount}L`;
                         let lacticDisplay = `${lacticAcidAmount}ml`;
                         
@@ -550,9 +545,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                             
                             waterDisplay = `${waterAmount}L (${primaryWater}+${secondaryWater})`;
                             lacticDisplay = `${lacticAcidAmount}ml (${primaryLactic}+${secondaryLactic})`;
-                          } else {
-                            waterDisplay = `${waterAmount}L (取得失敗: p=${!!primary}, s=${!!secondary})`;
-                            lacticDisplay = `${lacticAcidAmount}ml (取得失敗)`;
                           }
                         }
                         
@@ -634,8 +626,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                             const primaryMeasurement = primary.recipeData.measurement;
                             const secondaryMeasurement = secondary.recipeData.measurement;
                             measurementDisplay = `${expectedMeasurement}L (${primaryMeasurement}+${secondaryMeasurement})`;
-                          } else {
-                            measurementDisplay = `${expectedMeasurement}L (取得失敗)`;
                           }
                         }
                         
@@ -868,35 +858,55 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                     shubo.status === '準備中' ? 'bg-yellow-100 text-yellow-800' :
                     'bg-slate-100 text-slate-600';
 
+                  const isExpanded = expandedShubo === shubo.primaryNumber;
+
                   return (
-                    <tr key={shubo.primaryNumber} className={`border-b hover:bg-slate-50 ${shubo.status === '管理中' ? 'bg-green-50' : ''}`}>
-                      <td className="px-3 py-2 font-bold text-blue-700">{shubo.displayName}</td>
-                      <td className="px-3 py-2">{shubo.selectedTankId}</td>
-                      <td className="px-3 py-2">
-                        {shubo.dayNumber ? `${shubo.dayNumber}日目` : '-'}
-                      </td>
-                      <td className="px-3 py-2">
-                        {(() => {
-                          const startDate = shubo.shuboStartDate instanceof Date 
-                            ? shubo.shuboStartDate 
-                            : new Date(shubo.shuboStartDate);
-                          return startDate.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
-                        })()}
-                      </td>
-                      <td className="px-3 py-2">
-                        {shubo.shuboEndDates.map((endDate, i) => {
-                          const date = endDate instanceof Date ? endDate : new Date(endDate);
-                          return date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
-                        }).join(', ')}
-                      </td>
-                      <td className="px-3 py-2">{shubo.period}日</td>
-                      <td className="px-3 py-2 text-xs">{shubo.originalData[0]?.yeast || '-'}</td>
-                      <td className="px-3 py-2">
-                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${statusColor}`}>
-                          {shubo.status}
-                        </span>
-                      </td>
-                    </tr>
+                    <>
+                      <tr 
+                        key={shubo.primaryNumber} 
+                        onClick={() => handleShuboClick(shubo.primaryNumber)}
+                        className={`border-b hover:bg-slate-50 cursor-pointer ${shubo.status === '管理中' ? 'bg-green-50' : ''}`}
+                      >
+                        <td className="px-3 py-2 font-bold text-blue-700">
+                          <span className="mr-2">{isExpanded ? '▼' : '▶'}</span>
+                          {shubo.displayName}
+                        </td>
+                        <td className="px-3 py-2">{shubo.selectedTankId}</td>
+                        <td className="px-3 py-2">
+                          {shubo.dayNumber ? `${shubo.dayNumber}日目` : '-'}
+                        </td>
+                        <td className="px-3 py-2">
+                          {(() => {
+                            const startDate = shubo.shuboStartDate instanceof Date 
+                              ? shubo.shuboStartDate 
+                              : new Date(shubo.shuboStartDate);
+                            return startDate.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
+                          })()}
+                        </td>
+                        <td className="px-3 py-2">
+                          {shubo.shuboEndDates.map((endDate, i) => {
+                            const date = endDate instanceof Date ? endDate : new Date(endDate);
+                            return date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
+                          }).join(', ')}
+                        </td>
+                        <td className="px-3 py-2">{shubo.period}日</td>
+                        <td className="px-3 py-2 text-xs">{shubo.originalData[0]?.yeast || '-'}</td>
+                        <td className="px-3 py-2">
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${statusColor}`}>
+                            {shubo.status}
+                          </span>
+                        </td>
+                      </tr>
+                      
+                      {isExpanded && (
+                        <ShuboDetailExpansion
+                          shubo={shubo}
+                          records={getShuboRecords(shubo)}
+                          dailyEnvironment={dailyEnvironment}
+                          onUpdateRecord={handleUpdateRecord}
+                        />
+                      )}
+                    </>
                   );
                 })}
               </tbody>

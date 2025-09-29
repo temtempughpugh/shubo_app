@@ -1,4 +1,4 @@
-import type { ShuboRawData, RecipeRawData, TankConversionRawData, ConfiguredShuboData, MergedShuboData } from './types';
+import type { ShuboRawData, RecipeRawData, TankConversionRawData, ConfiguredShuboData, MergedShuboData, DailyRecordData } from './types';
 
 // Excelシリアル値をJavaScript Dateに変換
 export function convertExcelDateToJs(excelDate: number): Date {
@@ -27,6 +27,56 @@ export function formatDateWithDay(date: Date): string {
 
 export function formatFullDate(date: Date): string {
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
+export function formatDateFull(date: Date): string {
+  const days = ['日', '月', '火', '水', '木', '金', '土'];
+  return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}(${days[date.getDay()]})`;
+}
+
+// 日付をキーに変換
+export function dateToKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+// 日別記録生成
+export function generateDailyRecords(shubo: MergedShuboData): DailyRecordData[] {
+  const records: DailyRecordData[] = [];
+  const startDate = new Date(shubo.shuboStartDate);
+  const totalDays = shubo.maxShuboDays;
+
+  for (let day = 1; day <= totalDays; day++) {
+    const recordDate = new Date(startDate);
+    recordDate.setDate(startDate.getDate() + (day - 1));
+
+    let dayLabel = '-';
+    if (day === 1) {
+      dayLabel = '仕込み';
+    } else if (day === 2) {
+      dayLabel = '打瀬';
+    } else if (day === totalDays) {
+      dayLabel = '卸し';
+    }
+
+    records.push({
+      shuboNumber: shubo.primaryNumber,
+      recordDate,
+      dayNumber: day,
+      dayLabel,
+      timeSlot: '1-1',
+      temperature: null,
+      temperature1: null,
+      temperature2: null,
+      temperatureAfterHeating: null,
+      baume: null,
+      acidity: null,
+      alcohol: null,
+      memo: '',
+      isAnalysisDay: false
+    });
+  }
+
+  return records;
 }
 
 // CSV解析

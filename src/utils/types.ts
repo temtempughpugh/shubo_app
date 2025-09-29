@@ -93,20 +93,27 @@ export interface MergedShuboData {
 }
 
 // 日別記録データ
+// 日別記録データ
 export interface DailyRecordData {
   shuboNumber: number;
   recordDate: Date;
   dayNumber: number;
   dayLabel: string;
   timeSlot: string;
-  temperature: number | null;
-  temperatureAfterHeating: number | null;
+  temperature: number | null;  // 既存（互換性のため残す）
+  temperature1: number | null;  // 品温① (1日目→水麹温度, 2日目以降→品温)
+  temperature2: number | null;  // 品温② (1日目→仕込温度, 2日目以降→連動なし)
+  temperatureAfterHeating: number | null;  // 既存（互換性のため残す）
   baume: number | null;
   acidity: number | null;
   alcohol: number | null;
   memo: string;
   isAnalysisDay: boolean;
 }
+
+// 日付ラベル選択肢
+export const DAY_LABEL_OPTIONS = ['-', '暖気', '分け'] as const;
+export type DayLabelOption = typeof DAY_LABEL_OPTIONS[number];
 
 // タンク設定データ
 export interface TankConfigData {
