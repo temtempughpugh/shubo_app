@@ -58,32 +58,28 @@ interface AnalysisInput {
 
 export default function Dashboard({ dataContext }: DashboardProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   
-  // 環境データ（日付ごと）
   const [dailyEnvironment, setDailyEnvironment] = useState<DailyEnvironment>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.DAILY_ENVIRONMENT);
     return saved ? JSON.parse(saved) : {};
   });
 
-  // 仕込み準備・予定入力データ
   const [brewingInput, setBrewingInput] = useState<BrewingInput>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.BREWING_PREPARATION);
     return saved ? JSON.parse(saved) : {};
   });
 
-  // 卸し入力データ
   const [dischargeInput, setDischargeInput] = useState<DischargeInput>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.DISCHARGE_SCHEDULE);
     return saved ? JSON.parse(saved) : {};
   });
 
-  // 分析入力データ（酒母番号 → 日付 → 分析値）
   const [analysisInput, setAnalysisInput] = useState<AnalysisInput>(() => {
     const saved = localStorage.getItem('shubo_analysis_input');
     return saved ? JSON.parse(saved) : {};
   });
 
-  // localStorageに保存
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.DAILY_ENVIRONMENT, JSON.stringify(dailyEnvironment));
   }, [dailyEnvironment]);
@@ -100,16 +96,13 @@ export default function Dashboard({ dataContext }: DashboardProps) {
     localStorage.setItem('shubo_analysis_input', JSON.stringify(analysisInput));
   }, [analysisInput]);
 
-  // 日付キー生成
   const getDateKey = (date: Date): string => {
     return date.toISOString().split('T')[0];
   };
 
-  // 現在の日付の環境データ
   const currentDateKey = getDateKey(currentDate);
   const currentEnv = dailyEnvironment[currentDateKey] || { temperature: '', humidity: '' };
 
-  // 日付フォーマット
   const formatDate = (date: Date): string => {
     const days = ['日', '月', '火', '水', '木', '金', '土'];
     const year = date.getFullYear();
@@ -119,7 +112,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
     return `${year}/${month}/${day}(${dayOfWeek})`;
   };
 
-  // 日数計算
   const calculateDayNumber = (startDate: Date | string, currentDate: Date): number => {
     const start = startDate instanceof Date ? startDate : new Date(startDate);
     const diffTime = currentDate.getTime() - start.getTime();
@@ -127,7 +119,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
     return diffDays + 1;
   };
 
-  // ステータス判定（MergedShuboData用）
   const getStatusForMerged = (shubo: MergedShuboData): string => {
     const today = new Date(currentDate);
     today.setHours(0, 0, 0, 0);
@@ -137,7 +128,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
       : new Date(shubo.shuboStartDate);
     startDate.setHours(0, 0, 0, 0);
     
-    // 最後の卸日でステータス判定
     const lastEndDate = shubo.shuboEndDates[shubo.shuboEndDates.length - 1];
     const endDate = lastEndDate instanceof Date 
       ? new Date(lastEndDate) 
@@ -149,7 +139,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
     return '完了';
   };
 
-  // タンク変換（容量→検尺）
   const getKensyakuFromCapacity = (tankId: string, targetCapacity: number): number | null => {
     const tankConversions = dataContext.tankConversionMap.get(tankId);
     if (!tankConversions || tankConversions.length === 0) return null;
@@ -171,7 +160,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
     return closestConversion.kensyaku;
   };
 
-  // タンク変換（検尺→容量）
   const getCapacityFromKensyaku = (tankId: string, kensyaku: number): number | null => {
     const tankConversions = dataContext.tankConversionMap.get(tankId);
     if (!tankConversions) return null;
@@ -180,7 +168,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
     return match ? match.capacity : null;
   };
 
-  // 本日の作業データを取得（MergedShuboDataを使用）
   const todayWorks = useMemo(() => {
     const tomorrow = new Date(currentDate);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -189,7 +176,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
     const today = new Date(currentDate);
     today.setHours(0, 0, 0, 0);
 
-    // 仕込み準備（明日が仕込み日）
     const preparations = dataContext.mergedShuboData.filter(shubo => {
       const startDate = shubo.shuboStartDate instanceof Date 
         ? new Date(shubo.shuboStartDate) 
@@ -198,7 +184,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
       return startDate.getTime() === tomorrow.getTime();
     });
 
-    // 仕込み予定（今日が仕込み日）
     const brewingSchedules = dataContext.mergedShuboData.filter(shubo => {
       const startDate = shubo.shuboStartDate instanceof Date 
         ? new Date(shubo.shuboStartDate) 
@@ -207,16 +192,14 @@ export default function Dashboard({ dataContext }: DashboardProps) {
       return startDate.getTime() === today.getTime();
     });
 
-    // 分析予定（管理中のすべて、ただし仕込み日（1日目）を除く）
     const analysisSchedules = dataContext.mergedShuboData.filter(shubo => {
       const status = getStatusForMerged(shubo);
       if (status !== '管理中') return false;
       
       const dayNum = calculateDayNumber(shubo.shuboStartDate, currentDate);
-      return dayNum > 1; // 1日目（仕込み日）は除外
+      return dayNum > 1;
     });
 
-    // 卸し予定（今日がいずれかの卸し日）
     const dischargeSchedules = dataContext.mergedShuboData.filter(shubo => {
       return shubo.shuboEndDates.some(endDate => {
         const date = endDate instanceof Date ? new Date(endDate) : new Date(endDate);
@@ -233,17 +216,32 @@ export default function Dashboard({ dataContext }: DashboardProps) {
     };
   }, [currentDate, dataContext.mergedShuboData]);
 
-  // 酒母一覧（ステータス順、MergedShuboDataを使用）
   const shuboList = useMemo(() => {
     type ShuboStatus = '管理中' | '準備中' | '完了';
     
-    const list = dataContext.mergedShuboData.map(shubo => ({
-      ...shubo,
-      status: getStatusForMerged(shubo) as ShuboStatus,
-      dayNumber: getStatusForMerged(shubo) === '管理中' 
-        ? calculateDayNumber(shubo.shuboStartDate, currentDate)
-        : null
-    }));
+    const list = dataContext.mergedShuboData.map(shubo => {
+      const status = getStatusForMerged(shubo) as ShuboStatus;
+      
+      const startDate = shubo.shuboStartDate instanceof Date 
+        ? shubo.shuboStartDate 
+        : new Date(shubo.shuboStartDate);
+      const lastEndDate = shubo.shuboEndDates[shubo.shuboEndDates.length - 1];
+      const endDate = lastEndDate instanceof Date 
+        ? lastEndDate 
+        : new Date(lastEndDate);
+      
+      const diffTime = endDate.getTime() - startDate.getTime();
+      const period = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      
+      return {
+        ...shubo,
+        status,
+        dayNumber: status === '管理中' 
+          ? calculateDayNumber(shubo.shuboStartDate, currentDate)
+          : null,
+        period
+      };
+    });
 
     return list.sort((a, b) => {
       const statusOrder: Record<ShuboStatus, number> = { '管理中': 1, '準備中': 2, '完了': 3 };
@@ -255,11 +253,31 @@ export default function Dashboard({ dataContext }: DashboardProps) {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         
-        {/* 日付ナビゲーション */}
         <div className="bg-white rounded-xl shadow-lg border border-slate-200/50 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
-              <h2 className="text-xl font-bold text-slate-800">📅 {formatDate(currentDate)}</h2>
+              <div className="relative">
+                <button
+                  onClick={() => setShowDatePicker(!showDatePicker)}
+                  className="text-xl font-bold text-slate-800 hover:text-blue-600 cursor-pointer"
+                >
+                  📅 {formatDate(currentDate)}
+                </button>
+                {showDatePicker && (
+                  <div className="absolute top-full left-0 mt-2 bg-white border border-slate-300 rounded-lg shadow-xl p-2 z-50">
+                    <input
+                      type="date"
+                      value={currentDate.toISOString().split('T')[0]}
+                      onChange={(e) => {
+                        const newDate = new Date(e.target.value + 'T00:00:00');
+                        setCurrentDate(newDate);
+                        setShowDatePicker(false);
+                      }}
+                      className="px-3 py-2 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                )}
+              </div>
               <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-2">
                   <label className="text-sm font-bold text-slate-600">気温</label>
@@ -322,7 +340,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
           </div>
         </div>
 
-        {/* 本日の作業 - 分析予定 */}
         <div className="bg-white rounded-xl shadow-lg border border-slate-200/50 overflow-hidden">
           <div className="bg-orange-600 px-4 py-2">
             <h3 className="text-base font-bold text-white">🔬 本日の作業 - 分析予定</h3>
@@ -464,9 +481,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
           </div>
         </div>
 
-        {/* 仕込み準備と仕込み予定を横並び */}
         <div className="grid grid-cols-2 gap-6">
-          {/* 本日の作業 - 仕込み準備 */}
           <div className="bg-white rounded-xl shadow-lg border border-slate-200/50 overflow-hidden">
             <div className="bg-purple-600 px-4 py-2">
               <h3 className="text-sm font-bold text-white">🧪 仕込み準備（明日）</h3>
@@ -490,7 +505,17 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                     </thead>
                     <tbody>
                       {todayWorks.preparations.map(shubo => {
+                        const isDual = shubo.primaryNumber !== shubo.secondaryNumber;
                         const waterAmount = shubo.recipeData.water;
+                        const lacticAcidAmount = shubo.recipeData.lacticAcid;
+                        
+                        const waterDisplay = isDual 
+                          ? `${waterAmount}L (${waterAmount/2}+${waterAmount/2})` 
+                          : `${waterAmount}L`;
+                        const lacticDisplay = isDual 
+                          ? `${lacticAcidAmount}ml (${lacticAcidAmount/2}+${lacticAcidAmount/2})` 
+                          : `${lacticAcidAmount}ml`;
+                        
                         const input = brewingInput[shubo.primaryNumber] || { iceAmount: null };
                         const preparationWater = input.iceAmount ? waterAmount - input.iceAmount : waterAmount;
                         const kensyaku = getKensyakuFromCapacity(shubo.selectedTankId, preparationWater);
@@ -499,7 +524,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                           <tr key={shubo.primaryNumber} className="border-b hover:bg-slate-50">
                             <td className="px-2 py-2 font-bold text-blue-700 text-xs">{shubo.displayName}</td>
                             <td className="px-2 py-2 text-xs">{shubo.selectedTankId}</td>
-                            <td className="px-2 py-2 text-xs">{waterAmount}L</td>
+                            <td className="px-2 py-2 text-xs">{waterDisplay}</td>
                             <td className="px-2 py-2">
                               <input 
                                 type="number" 
@@ -521,7 +546,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                             <td className="px-2 py-2 text-slate-700 text-xs">
                               {kensyaku !== null ? `${kensyaku}mm` : '-'}
                             </td>
-                            <td className="px-2 py-2 text-xs">{shubo.recipeData.lacticAcid}ml</td>
+                            <td className="px-2 py-2 text-xs">{lacticDisplay}</td>
                           </tr>
                         );
                       })}
@@ -532,7 +557,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
             </div>
           </div>
 
-          {/* 本日の作業 - 仕込み予定 */}
           <div className="bg-white rounded-xl shadow-lg border border-slate-200/50 overflow-hidden">
             <div className="bg-green-600 px-4 py-2">
               <h3 className="text-sm font-bold text-white">🌾 仕込み予定（本日）</h3>
@@ -557,6 +581,13 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                     </thead>
                     <tbody>
                       {todayWorks.brewingSchedules.map(shubo => {
+                        const isDual = shubo.primaryNumber !== shubo.secondaryNumber;
+                        const expectedMeasurement = shubo.recipeData.measurement;
+                        
+                        const measurementDisplay = isDual 
+                          ? `${expectedMeasurement}L (${expectedMeasurement/2}+${expectedMeasurement/2})` 
+                          : `${expectedMeasurement}L`;
+                        
                         const input = brewingInput[shubo.primaryNumber] || { 
                           mizukoujiTemperature: null, 
                           brewingTemperature: null, 
@@ -565,7 +596,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                         const capacity = input.afterBrewingKensyaku 
                           ? getCapacityFromKensyaku(shubo.selectedTankId, input.afterBrewingKensyaku) 
                           : null;
-                        const expectedMeasurement = shubo.recipeData.measurement;
                         const ratio = capacity && expectedMeasurement 
                           ? ((capacity / expectedMeasurement) * 100).toFixed(1) 
                           : null;
@@ -604,7 +634,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                                 className="w-12 px-1 py-1 text-xs border rounded" 
                               />
                             </td>
-                            <td className="px-2 py-2 text-xs">{expectedMeasurement}L</td>
+                            <td className="px-2 py-2 text-xs">{measurementDisplay}</td>
                             <td className="px-2 py-2">
                               <input 
                                 type="number" 
@@ -637,7 +667,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
           </div>
         </div>
 
-        {/* 本日の作業 - 卸し予定 */}
         <div className="bg-white rounded-xl shadow-lg border border-slate-200/50 overflow-hidden">
           <div className="bg-red-600 px-4 py-2">
             <h3 className="text-base font-bold text-white">📤 本日の作業 - 卸し予定</h3>
@@ -763,7 +792,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
           </div>
         </div>
 
-        {/* 酒母一覧テーブル */}
         <div className="bg-white rounded-xl shadow-lg border border-slate-200/50 overflow-hidden">
           <div className="bg-slate-800 px-4 py-2">
             <h3 className="text-base font-bold text-white">📋 酒母一覧</h3>
@@ -810,8 +838,8 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                           return date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
                         }).join(', ')}
                       </td>
-                      <td className="px-3 py-2">{shubo.maxShuboDays}日</td>
-                      <td className="px-3 py-2 text-xs">{shubo.originalData[0].yeast}</td>
+                      <td className="px-3 py-2">{shubo.period}日</td>
+                      <td className="px-3 py-2 text-xs">{shubo.originalData[0]?.yeast || '-'}</td>
                       <td className="px-3 py-2">
                         <span className={`inline-block px-2 py-1 rounded-full text-xs font-bold ${statusColor}`}>
                           {shubo.status}

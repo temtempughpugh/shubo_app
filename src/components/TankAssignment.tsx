@@ -31,7 +31,6 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
   const enabledTanks = dataContext.getEnabledTanks().sort((a, b) => a.maxCapacity - b.maxCapacity);
   const dualShuboFlags = checkDualShubo(dataContext.shuboRawData);
 
-  // 初期化: configuredShuboDataからassignmentsを読み込み（マウント時のみ）
   React.useEffect(() => {
     const initialMap = new Map<number, { shuboType: string; tankId: string }>();
     dataContext.configuredShuboData.forEach(config => {
@@ -46,37 +45,22 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
   function canSelectTank(tankId: string, shuboNumber: number): boolean {
     const currentAssignment = assignments.get(shuboNumber);
     if (currentAssignment?.tankId === tankId) return true;
-    
-    const currentShubo = dataContext.shuboRawData.find(s => s.shuboNumber === shuboNumber);
-    if (!currentShubo) return true;
-    
-    const currentStartDate = convertExcelDateToJs(parseFloat(currentShubo.shuboStartDate));
-    const currentEndDate = convertExcelDateToJs(parseFloat(currentShubo.shuboEndDate));
-    
-    const otherUsage = Array.from(assignments.entries()).filter(([num, assignment]) => 
-      num !== shuboNumber && assignment.tankId === tankId
-    );
-    
-    for (const [otherNum, _] of otherUsage) {
-      const otherShubo = dataContext.shuboRawData.find(s => s.shuboNumber === otherNum);
-      if (!otherShubo) continue;
-      
-      const otherStartDate = convertExcelDateToJs(parseFloat(otherShubo.shuboStartDate));
-      const otherEndDate = convertExcelDateToJs(parseFloat(otherShubo.shuboEndDate));
-      
-      const hasOverlap = currentStartDate <= otherEndDate && currentEndDate >= otherStartDate;
-      if (hasOverlap) return false;
+
+    const shuboIndex = dataContext.shuboRawData.findIndex(s => s.shuboNumber === shuboNumber);
+    const isDualSecondary = shuboIndex > 0 && dualShuboFlags[shuboIndex - 1] && dualShuboFlags[shuboIndex];
+
+    if (isDualSecondary) {
+      const prevShubo = dataContext.shuboRawData[shuboIndex - 1];
+      const prevAssignment = assignments.get(prevShubo.shuboNumber);
+      return prevAssignment?.tankId === tankId;
     }
-    
-    const configuredUsage = dataContext.configuredShuboData.filter(config => 
-      config.selectedTankId === tankId && config.shuboNumber !== shuboNumber
-    );
-    
-    for (const config of configuredUsage) {
-      const hasOverlap = currentStartDate <= config.shuboEndDate && currentEndDate >= config.shuboStartDate;
-      if (hasOverlap) return false;
+
+    for (const [num, assignment] of assignments.entries()) {
+      if (num !== shuboNumber && assignment.tankId === tankId) {
+        return false;
+      }
     }
-    
+
     return true;
   }
 
@@ -88,7 +72,6 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
       return newMap;
     });
 
-    // リアルタイム保存
     const assignment = assignments.get(shuboNumber);
     const tankId = assignment?.tankId || '';
     if (tankId) {
@@ -117,7 +100,6 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
       return newMap;
     });
 
-    // リアルタイム保存
     const assignment = assignments.get(shuboNumber);
     const shuboType = assignment?.shuboType || '速醸';
     
@@ -127,7 +109,6 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
         dataContext.saveConfiguredShubo(configData);
       }
 
-      // 2個酛の場合、次の酒母も保存
       const shuboIndex = dataContext.shuboRawData.findIndex(s => s.shuboNumber === shuboNumber);
       const isDualPrimary = dualShuboFlags[shuboIndex];
 
@@ -166,7 +147,8 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
     const tankData = enabledTanks.find(t => t.tankId === tankId);
     const tankConversions = dataContext.tankConversionMap.get(tankId) || [];
     
-    const waterAmount = isDual ? recipe.water / 2 : recipe.water;
+    // 修正: 2個酛でもレシピをそのまま使用
+    const waterAmount = recipe.water;
     const waterConversion = tankConversions.find(c => c.capacity >= waterAmount) || tankConversions[0];
 
     let displayName = `${shuboNumber}号`;
@@ -196,12 +178,13 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
       shuboEndDate,
       shuboDays: shuboData.shuboDays,
       recipeData: {
-        totalRice: isDual ? recipe.recipeTotalRice / 2 : recipe.recipeTotalRice,
-        steamedRice: isDual ? recipe.steamedRice / 2 : recipe.steamedRice,
-        kojiRice: isDual ? recipe.kojiRice / 2 : recipe.kojiRice,
-        water: waterAmount,
-        measurement: isDual ? recipe.measurement / 2 : recipe.measurement,
-        lacticAcid: isDual ? recipe.lacticAcid / 2 : recipe.lacticAcid,
+        // 修正: すべてそのまま保存（半分にしない）
+        totalRice: recipe.recipeTotalRice,
+        steamedRice: recipe.steamedRice,
+        kojiRice: recipe.kojiRice,
+        water: recipe.water,
+        measurement: recipe.measurement,
+        lacticAcid: recipe.lacticAcid,
       },
       tankData: {
         tankDisplayName: tankData?.displayName || tankId,
@@ -211,7 +194,7 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
       },
       dualShuboInfo: {
         isDualShubo: isDual,
-         isPrimary: isDualPrimary,  // ← この行を追加
+        isPrimary: isDualPrimary,
         primaryNumber,
         secondaryNumber,
         combinedDisplayName,
@@ -260,19 +243,12 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
     const recipe = findRecipe(dataContext.recipeRawData, shuboType, shuboData.brewingScale);
     
     if (!recipe) return null;
-    
-    const shuboIndex = dataContext.shuboRawData.findIndex(s => s.shuboNumber === shuboNumber);
-    const isDualPrimary = dualShuboFlags[shuboIndex];
-    const isDualSecondary = shuboIndex > 0 && dualShuboFlags[shuboIndex - 1];
-    const isDual = isDualPrimary || isDualSecondary;
-    
-    const waterAmount = isDual ? recipe.water / 2 : recipe.water;
-    const lacticAmount = isDual ? recipe.lacticAcid / 2 : recipe.lacticAcid;
 
+    // 修正: そのまま返す（半分にしない）
     return {
-      water: waterAmount,
-      lacticAcid: lacticAmount,
-      totalRice: isDual ? recipe.recipeTotalRice / 2 : recipe.recipeTotalRice
+      water: recipe.water,
+      lacticAcid: recipe.lacticAcid,
+      totalRice: recipe.recipeTotalRice
     };
   }
 
@@ -311,8 +287,9 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
     const isDualPrimary = dualShuboFlags[index];
     const isDualSecondary = index > 0 && dualShuboFlags[index - 1];
     
-    const actualPrimary = isDualPrimary;
-    const actualSecondary = !isDualPrimary && isDualSecondary && dualShuboFlags[index];
+    // 修正: 正しい2個酛判定
+    const actualPrimary = isDualPrimary && (!isDualSecondary);
+    const actualSecondary = isDualPrimary && isDualSecondary;
     
     let dualLabel = '';
     if (actualPrimary) {
@@ -336,42 +313,24 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4">
-      <div className="max-w-full mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-200/50 p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-3xl font-bold text-slate-800 mb-2">タンク割り当て</h2>
-              <p className="text-slate-600">各酒母の酛種類とタンクを選択してください</p>
-            </div>
-            <div className="hidden md:flex space-x-4">
-              <button
-                onClick={onTankSettings}
-                className="bg-slate-600 hover:bg-slate-700 text-white font-bold px-6 py-2 rounded-xl"
-              >
-                タンク設定
-              </button>
-              <div className="bg-blue-50 border border-blue-200 px-4 py-2 rounded-xl">
-                <span className="text-blue-700 font-semibold">酒母</span>
-                <span className="text-blue-900 ml-2 font-bold text-lg">{dataContext.shuboRawData.length}件</span>
-              </div>
-              <div className="bg-green-50 border border-green-200 px-4 py-2 rounded-xl">
-                <span className="text-green-700 font-semibold">タンク</span>
-                <span className="text-green-900 ml-2 font-bold text-lg">{enabledTanks.length}個</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden mb-6">
-          <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4">
-            <h3 className="text-xl font-bold text-white">酒母スケジュール</h3>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-white">酒母スケジュール一覧</h2>
+            <button
+              onClick={onTankSettings}
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-bold transition-all"
+            >
+              ⚙️ タンク設定
+            </button>
           </div>
           
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gradient-to-r from-slate-100 to-slate-50 border-b border-slate-200">
+                <tr className="bg-slate-100 border-b">
                   <th className="px-3 py-3 text-left text-xs font-bold text-slate-700 border-r">順号</th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-slate-700 border-r">仕込規模</th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-slate-700 border-r">仕込区分</th>
@@ -396,29 +355,25 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
                   
                   return (
                     <tr key={shubo.shuboNumber} className={`hover:bg-blue-50 border-b ${
-                      shubo.isDualPrimary || shubo.isDualSecondary ? 'bg-amber-50' : index % 2 === 0 ? 'bg-slate-25' : 'bg-white'
+                      shubo.isDualPrimary || shubo.isDualSecondary ? 'bg-amber-50' : index % 2 === 0 ? 'bg-white' : 'bg-slate-50'
                     }`}>
-                      <td className="px-3 py-2 border-r">
-                        <span className="font-bold text-slate-800">{shubo.shuboNumber}号</span>
-                      </td>
-                      <td className="px-3 py-2 border-r">
-                        <span className="font-semibold text-slate-700">{shubo.brewingScale}kg</span>
-                      </td>
+                      <td className="px-3 py-2 font-bold text-blue-700 border-r">{shubo.shuboNumber}号</td>
+                      <td className="px-3 py-2 border-r text-xs">{shubo.brewingScale}kg</td>
                       <td className="px-3 py-2 border-r text-xs">{shubo.brewingCategory}</td>
-                      <td className="px-3 py-2 border-r font-mono text-xs">
-                        {formatShortDate(convertExcelDateToJs(parseFloat(shubo.shuboStartDate)))}
+                      <td className="px-3 py-2 border-r text-xs">
+                        {shubo.shuboStartDate ? formatShortDate(convertExcelDateToJs(parseFloat(shubo.shuboStartDate))) : '-'}
                       </td>
-                      <td className="px-3 py-2 border-r font-mono text-xs">
-                        {formatShortDate(convertExcelDateToJs(parseFloat(shubo.shuboEndDate)))}
+                      <td className="px-3 py-2 border-r text-xs">
+                        {shubo.shuboEndDate ? formatShortDate(convertExcelDateToJs(parseFloat(shubo.shuboEndDate))) : '-'}
                       </td>
-                      <td className="px-3 py-2 border-r">{shubo.shuboDays}日</td>
+                      <td className="px-3 py-2 border-r text-xs">{shubo.shuboDays}日</td>
                       <td className="px-3 py-2 border-r text-xs">{shubo.yeast}</td>
-                      <td className="px-3 py-2 border-r">{shubo.shuboTotalRice}kg</td>
+                      <td className="px-3 py-2 border-r text-xs">{shubo.shuboTotalRice}kg</td>
                       <td className="px-3 py-2 border-r">
                         <select
                           value={assignment.shuboType}
                           onChange={(e) => handleShuboTypeChange(shubo.shuboNumber, e.target.value)}
-                          className="w-full px-2 py-1 border-2 border-slate-400 bg-white rounded text-slate-900 text-xs"
+                          className="w-full px-2 py-1 text-xs border border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="速醸">速醸</option>
                           <option value="高温糖化">高温糖化</option>
@@ -428,23 +383,22 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
                         <select
                           value={assignment.tankId}
                           onChange={(e) => handleTankChange(shubo.shuboNumber, e.target.value)}
-                          disabled={shubo.isDualSecondary}
-                          className="w-full px-2 py-1 border-2 border-slate-400 bg-white rounded text-slate-900 text-xs disabled:bg-slate-100"
+                          className="w-full px-2 py-1 text-xs border border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">選択</option>
-                          {enabledTanks.map(tank => {
-                            const isAvailable = canSelectTank(tank.tankId, shubo.shuboNumber);
-                            return (
-                              <option key={tank.tankId} value={tank.tankId} disabled={!isAvailable}>
-                                {tank.tankId} ({tank.maxCapacity}L)
-                              </option>
-                            );
-                          })}
+                          {enabledTanks.map(tank => (
+                            <option 
+                              key={tank.tankId} 
+                              value={tank.tankId}
+                              disabled={!canSelectTank(tank.tankId, shubo.shuboNumber)}
+                            >
+                              {tank.displayName}
+                            </option>
+                          ))}
                         </select>
                       </td>
                       <td className="px-3 py-2 border-r">
-                        <span className={recipeData ? 
-                          'text-blue-700 font-semibold' : 'text-slate-400'}>
+                        <span className={recipeData ? 'text-blue-700 font-semibold' : 'text-slate-400'}>
                           {recipeData ? `${recipeData.water}L` : '-'}
                         </span>
                       </td>
@@ -496,23 +450,23 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
                   const availableDate = getTankAvailableDate(tank.tankId);
                   
                   return (
-                    <tr key={tank.tankId} className={`hover:bg-slate-50 border-b ${index % 2 === 0 ? 'bg-white' : 'bg-slate-25'}`}>
-                      <td className="px-4 py-2 font-bold">{tank.tankId}</td>
-                      <td className="px-4 py-2">{tank.maxCapacity}L</td>
-                      <td className="px-4 py-2">
-                        <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${
-                          isUsed ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                        }`}>
-                          {isUsed ? '使用中' : '空き'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2">{usedBy || '-'}</td>
-                      <td className="px-4 py-2 font-mono text-xs">{availableDate}</td>
-                      <td className="px-4 py-2">
-                        {tank.isRecommended && (
-                          <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">推奨</span>
+                    <tr key={tank.tankId} className={`hover:bg-slate-50 border-b ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}>
+                      <td className="px-4 py-3 font-bold text-blue-700">{tank.tankId}</td>
+                      <td className="px-4 py-3">{tank.maxCapacity}L</td>
+                      <td className="px-4 py-3">
+                        {isUsed ? (
+                          <span className="inline-block bg-red-100 text-red-700 px-2 py-1 rounded-full text-xs font-bold">
+                            使用中
+                          </span>
+                        ) : (
+                          <span className="inline-block bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-bold">
+                            空き
+                          </span>
                         )}
                       </td>
+                      <td className="px-4 py-3">{usedBy || '-'}</td>
+                      <td className="px-4 py-3">{availableDate}</td>
+                      <td className="px-4 py-3 text-slate-500 text-xs">-</td>
                     </tr>
                   );
                 })}
@@ -520,6 +474,7 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
             </table>
           </div>
         </div>
+
       </div>
     </div>
   );
