@@ -509,12 +509,52 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                         const waterAmount = shubo.recipeData.water;
                         const lacticAcidAmount = shubo.recipeData.lacticAcid;
                         
-                        const waterDisplay = isDual 
-                          ? `${waterAmount}L (${waterAmount/2}+${waterAmount/2})` 
-                          : `${waterAmount}L`;
-                        const lacticDisplay = isDual 
-                          ? `${lacticAcidAmount}ml (${lacticAcidAmount/2}+${lacticAcidAmount/2})` 
-                          : `${lacticAcidAmount}ml`;
+                        // デバッグログ
+                        if (isDual) {
+                          console.log('=== 2個酛デバッグ ===');
+                          console.log('酒母:', shubo.displayName);
+                          console.log('primaryNumber:', shubo.primaryNumber);
+                          console.log('secondaryNumber:', shubo.secondaryNumber);
+                          console.log('合計 water:', waterAmount);
+                          console.log('合計 lacticAcid:', lacticAcidAmount);
+                          console.log('configuredShuboData 件数:', dataContext.configuredShuboData?.length);
+                          
+                          const primary = dataContext.configuredShuboData?.find(s => s.shuboNumber === shubo.primaryNumber);
+                          const secondary = dataContext.configuredShuboData?.find(s => s.shuboNumber === shubo.secondaryNumber);
+                          
+                          console.log('primary found:', !!primary);
+                          console.log('secondary found:', !!secondary);
+                          
+                          if (primary) {
+                            console.log('primary water:', primary.recipeData.water);
+                            console.log('primary lacticAcid:', primary.recipeData.lacticAcid);
+                          }
+                          if (secondary) {
+                            console.log('secondary water:', secondary.recipeData.water);
+                            console.log('secondary lacticAcid:', secondary.recipeData.lacticAcid);
+                          }
+                        }
+                        
+                        let waterDisplay = `${waterAmount}L`;
+                        let lacticDisplay = `${lacticAcidAmount}ml`;
+                        
+                        if (isDual && dataContext.configuredShuboData && dataContext.configuredShuboData.length > 0) {
+                          const primary = dataContext.configuredShuboData.find(s => s.shuboNumber === shubo.primaryNumber);
+                          const secondary = dataContext.configuredShuboData.find(s => s.shuboNumber === shubo.secondaryNumber);
+                          
+                          if (primary && secondary) {
+                            const primaryWater = primary.recipeData.water;
+                            const secondaryWater = secondary.recipeData.water;
+                            const primaryLactic = primary.recipeData.lacticAcid;
+                            const secondaryLactic = secondary.recipeData.lacticAcid;
+                            
+                            waterDisplay = `${waterAmount}L (${primaryWater}+${secondaryWater})`;
+                            lacticDisplay = `${lacticAcidAmount}ml (${primaryLactic}+${secondaryLactic})`;
+                          } else {
+                            waterDisplay = `${waterAmount}L (取得失敗: p=${!!primary}, s=${!!secondary})`;
+                            lacticDisplay = `${lacticAcidAmount}ml (取得失敗)`;
+                          }
+                        }
                         
                         const input = brewingInput[shubo.primaryNumber] || { iceAmount: null };
                         const preparationWater = input.iceAmount ? waterAmount - input.iceAmount : waterAmount;
@@ -584,9 +624,20 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                         const isDual = shubo.primaryNumber !== shubo.secondaryNumber;
                         const expectedMeasurement = shubo.recipeData.measurement;
                         
-                        const measurementDisplay = isDual 
-                          ? `${expectedMeasurement}L (${expectedMeasurement/2}+${expectedMeasurement/2})` 
-                          : `${expectedMeasurement}L`;
+                        let measurementDisplay = `${expectedMeasurement}L`;
+                        
+                        if (isDual && dataContext.configuredShuboData && dataContext.configuredShuboData.length > 0) {
+                          const primary = dataContext.configuredShuboData.find(s => s.shuboNumber === shubo.primaryNumber);
+                          const secondary = dataContext.configuredShuboData.find(s => s.shuboNumber === shubo.secondaryNumber);
+                          
+                          if (primary && secondary) {
+                            const primaryMeasurement = primary.recipeData.measurement;
+                            const secondaryMeasurement = secondary.recipeData.measurement;
+                            measurementDisplay = `${expectedMeasurement}L (${primaryMeasurement}+${secondaryMeasurement})`;
+                          } else {
+                            measurementDisplay = `${expectedMeasurement}L (取得失敗)`;
+                          }
+                        }
                         
                         const input = brewingInput[shubo.primaryNumber] || { 
                           mizukoujiTemperature: null, 

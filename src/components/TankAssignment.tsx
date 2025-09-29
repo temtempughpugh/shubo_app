@@ -55,8 +55,26 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
       return prevAssignment?.tankId === tankId;
     }
 
+    // 他の酒母が使用中かチェック（期間の重複を考慮）
+    const currentShubo = dataContext.shuboRawData.find(s => s.shuboNumber === shuboNumber);
+    if (!currentShubo) return true;
+    
+    const currentStartDate = convertExcelDateToJs(parseFloat(currentShubo.shuboStartDate));
+    const currentEndDate = convertExcelDateToJs(parseFloat(currentShubo.shuboEndDate));
+
     for (const [num, assignment] of assignments.entries()) {
-      if (num !== shuboNumber && assignment.tankId === tankId) {
+      if (num === shuboNumber || assignment.tankId !== tankId) continue;
+      
+      const otherShubo = dataContext.shuboRawData.find(s => s.shuboNumber === num);
+      if (!otherShubo) continue;
+      
+      const otherStartDate = convertExcelDateToJs(parseFloat(otherShubo.shuboStartDate));
+      const otherEndDate = convertExcelDateToJs(parseFloat(otherShubo.shuboEndDate));
+      
+      // 期間が重複しているかチェック
+      const isOverlapping = !(currentEndDate < otherStartDate || currentStartDate > otherEndDate);
+      
+      if (isOverlapping) {
         return false;
       }
     }
