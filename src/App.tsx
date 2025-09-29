@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import TankAssignment from './components/TankAssignment';
+import TankSettings from './components/TankSettings';
 import { useData } from './hooks/useData';
+
+type Page = 'tank-assignment' | 'tank-settings';
 
 export default function App() {
   const dataContext = useData();
+  const [currentPage, setCurrentPage] = useState<Page>('tank-assignment');
 
   // 読み込み中
   if (dataContext.isLoading) {
@@ -37,5 +41,19 @@ export default function App() {
   }
 
   // メイン画面
-  return <TankAssignment dataContext={dataContext} />;
+  if (currentPage === 'tank-settings') {
+    return (
+      <TankSettings 
+        dataContext={dataContext}
+        onBack={() => setCurrentPage('tank-assignment')}
+      />
+    );
+  }
+
+  return (
+    <TankAssignment 
+      dataContext={dataContext}
+      onTankSettings={() => setCurrentPage('tank-settings')}
+    />
+  );
 }

@@ -18,16 +18,30 @@ interface TankAssignmentProps {
     tankConversionMap: Map<string, any[]>;
     configuredShuboData: ConfiguredShuboData[];
     getEnabledTanks: () => TankConfigData[];
+    saveConfiguredShubo: (data: ConfiguredShuboData) => void;
     isLoading: boolean;
     loadError: string | null;
   };
+  onTankSettings: () => void;
 }
 
-export default function TankAssignment({ dataContext }: TankAssignmentProps) {
+export default function TankAssignment({ dataContext, onTankSettings }: TankAssignmentProps) {
   const [assignments, setAssignments] = useState<Map<number, { shuboType: string; tankId: string }>>(new Map());
 
-  const enabledTanks = dataContext.getEnabledTanks();
+  const enabledTanks = dataContext.getEnabledTanks().sort((a, b) => a.maxCapacity - b.maxCapacity);
   const dualShuboFlags = checkDualShubo(dataContext.shuboRawData);
+
+  // 初期化: configuredShuboDataからassignmentsを読み込み（マウント時のみ）
+  React.useEffect(() => {
+    const initialMap = new Map<number, { shuboType: string; tankId: string }>();
+    dataContext.configuredShuboData.forEach(config => {
+      initialMap.set(config.shuboNumber, {
+        shuboType: config.shuboType,
+        tankId: config.selectedTankId
+      });
+    });
+    setAssignments(initialMap);
+  }, []);
 
   function canSelectTank(tankId: string, shuboNumber: number): boolean {
     const currentAssignment = assignments.get(shuboNumber);
@@ -73,6 +87,16 @@ export default function TankAssignment({ dataContext }: TankAssignmentProps) {
       newMap.set(shuboNumber, { ...existing, shuboType });
       return newMap;
     });
+
+    // リアルタイム保存
+    const assignment = assignments.get(shuboNumber);
+    const tankId = assignment?.tankId || '';
+    if (tankId) {
+      const configData = createConfiguredShuboData(shuboNumber, shuboType, tankId);
+      if (configData) {
+        dataContext.saveConfiguredShubo(configData);
+      }
+    }
   }
 
   function handleTankChange(shuboNumber: number, tankId: string) {
@@ -92,6 +116,107 @@ export default function TankAssignment({ dataContext }: TankAssignmentProps) {
 
       return newMap;
     });
+
+    // リアルタイム保存
+    const assignment = assignments.get(shuboNumber);
+    const shuboType = assignment?.shuboType || '速醸';
+    
+    if (tankId) {
+      const configData = createConfiguredShuboData(shuboNumber, shuboType, tankId);
+      if (configData) {
+        dataContext.saveConfiguredShubo(configData);
+      }
+
+      // 2個酛の場合、次の酒母も保存
+      const shuboIndex = dataContext.shuboRawData.findIndex(s => s.shuboNumber === shuboNumber);
+      const isDualPrimary = dualShuboFlags[shuboIndex];
+
+      if (isDualPrimary && shuboIndex < dataContext.shuboRawData.length - 1) {
+        const nextShubo = dataContext.shuboRawData[shuboIndex + 1];
+        const nextAssignment = assignments.get(nextShubo.shuboNumber);
+        const nextShuboType = nextAssignment?.shuboType || '速醸';
+        
+        const nextConfigData = createConfiguredShuboData(nextShubo.shuboNumber, nextShuboType, tankId);
+        if (nextConfigData) {
+          dataContext.saveConfiguredShubo(nextConfigData);
+        }
+      }
+    }
+  }
+
+  function createConfiguredShuboData(
+    shuboNumber: number,
+    shuboType: string,
+    tankId: string
+  ): ConfiguredShuboData | null {
+    const shuboData = dataContext.shuboRawData.find(s => s.shuboNumber === shuboNumber);
+    if (!shuboData) return null;
+
+    const recipe = findRecipe(dataContext.recipeRawData, shuboType, shuboData.brewingScale);
+    if (!recipe) return null;
+
+    const shuboIndex = dataContext.shuboRawData.findIndex(s => s.shuboNumber === shuboNumber);
+    const isDualPrimary = dualShuboFlags[shuboIndex];
+    const isDualSecondary = shuboIndex > 0 && dualShuboFlags[shuboIndex - 1];
+    const isDual = isDualPrimary || isDualSecondary;
+
+    const shuboStartDate = convertExcelDateToJs(parseFloat(shuboData.shuboStartDate));
+    const shuboEndDate = convertExcelDateToJs(parseFloat(shuboData.shuboEndDate));
+
+    const tankData = enabledTanks.find(t => t.tankId === tankId);
+    const tankConversions = dataContext.tankConversionMap.get(tankId) || [];
+    
+    const waterAmount = isDual ? recipe.water / 2 : recipe.water;
+    const waterConversion = tankConversions.find(c => c.capacity >= waterAmount) || tankConversions[0];
+
+    let displayName = `${shuboNumber}号`;
+    let primaryNumber = shuboNumber;
+    let secondaryNumber: number | undefined;
+    let combinedDisplayName = displayName;
+
+    if (isDualPrimary) {
+      const nextShubo = dataContext.shuboRawData[shuboIndex + 1];
+      displayName = `${shuboNumber}・${nextShubo.shuboNumber}号`;
+      secondaryNumber = nextShubo.shuboNumber;
+      combinedDisplayName = displayName;
+    } else if (isDualSecondary) {
+      const prevShubo = dataContext.shuboRawData[shuboIndex - 1];
+      displayName = `${prevShubo.shuboNumber}・${shuboNumber}号`;
+      primaryNumber = prevShubo.shuboNumber;
+      secondaryNumber = shuboNumber;
+      combinedDisplayName = displayName;
+    }
+
+    return {
+      shuboNumber,
+      displayName,
+      selectedTankId: tankId,
+      shuboType,
+      shuboStartDate,
+      shuboEndDate,
+      shuboDays: shuboData.shuboDays,
+      recipeData: {
+        totalRice: isDual ? recipe.recipeTotalRice / 2 : recipe.recipeTotalRice,
+        steamedRice: isDual ? recipe.steamedRice / 2 : recipe.steamedRice,
+        kojiRice: isDual ? recipe.kojiRice / 2 : recipe.kojiRice,
+        water: waterAmount,
+        measurement: isDual ? recipe.measurement / 2 : recipe.measurement,
+        lacticAcid: isDual ? recipe.lacticAcid / 2 : recipe.lacticAcid,
+      },
+      tankData: {
+        tankDisplayName: tankData?.displayName || tankId,
+        maxCapacity: tankData?.maxCapacity || 0,
+        waterKensyaku: waterConversion?.kensyaku || 0,
+        waterCapacity: waterConversion?.capacity || 0,
+      },
+      dualShuboInfo: {
+        isDualShubo: isDual,
+        primaryNumber,
+        secondaryNumber,
+        combinedDisplayName,
+      },
+      originalData: shuboData,
+    };
   }
 
   function getTankAvailableDate(tankId: string): string {
@@ -113,10 +238,12 @@ export default function TankAssignment({ dataContext }: TankAssignmentProps) {
     
     if (configuredUsage.length > 0) {
       const latestEndDate = configuredUsage.reduce((latest, config) => {
-        return config.shuboEndDate > latest ? config.shuboEndDate : latest;
+        const configDate = new Date(config.shuboEndDate);
+        const latestDate = new Date(latest);
+        return configDate > latestDate ? config.shuboEndDate : latest;
       }, configuredUsage[0].shuboEndDate);
       
-      return formatShortDate(new Date(latestEndDate.getTime() + 24 * 60 * 60 * 1000));
+      return formatShortDate(new Date(new Date(latestEndDate).getTime() + 24 * 60 * 60 * 1000));
     }
     
     return 'すぐ使用可';
@@ -179,11 +306,6 @@ export default function TankAssignment({ dataContext }: TankAssignmentProps) {
     }
   }
 
-  function handleSaveAll() {
-    console.log('設定を保存:', Array.from(assignments.entries()));
-    alert('保存機能は未実装です');
-  }
-
   const displayShuboData = dataContext.shuboRawData.map((shubo, index) => {
     const isDualPrimary = dualShuboFlags[index];
     const isDualSecondary = index > 0 && dualShuboFlags[index - 1];
@@ -222,6 +344,12 @@ export default function TankAssignment({ dataContext }: TankAssignmentProps) {
               <p className="text-slate-600">各酒母の酛種類とタンクを選択してください</p>
             </div>
             <div className="hidden md:flex space-x-4">
+              <button
+                onClick={onTankSettings}
+                className="bg-slate-600 hover:bg-slate-700 text-white font-bold px-6 py-2 rounded-xl"
+              >
+                タンク設定
+              </button>
               <div className="bg-blue-50 border border-blue-200 px-4 py-2 rounded-xl">
                 <span className="text-blue-700 font-semibold">酒母</span>
                 <span className="text-blue-900 ml-2 font-bold text-lg">{dataContext.shuboRawData.length}件</span>
@@ -314,7 +442,8 @@ export default function TankAssignment({ dataContext }: TankAssignmentProps) {
                         </select>
                       </td>
                       <td className="px-3 py-2 border-r">
-                        <span className={recipeData ? 'text-blue-700 font-semibold' : 'text-slate-400'}>
+                        <span className={recipeData ? 
+                          'text-blue-700 font-semibold' : 'text-slate-400'}>
                           {recipeData ? `${recipeData.water}L` : '-'}
                         </span>
                       </td>
@@ -336,15 +465,6 @@ export default function TankAssignment({ dataContext }: TankAssignmentProps) {
                 })}
               </tbody>
             </table>
-          </div>
-          
-          <div className="bg-slate-50 px-6 py-4 border-t">
-            <button
-              onClick={handleSaveAll}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2 rounded-xl"
-            >
-              一括保存
-            </button>
           </div>
         </div>
 
