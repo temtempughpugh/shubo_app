@@ -180,10 +180,9 @@ export function useData() {
   function updateDailyRecord(record: DailyRecordData) {
     setDailyRecordsData(current => {
       const index = current.findIndex(item => 
-        item.shuboNumber === record.shuboNumber &&
-        item.recordDate.getTime() === record.recordDate.getTime() &&
-        item.timeSlot === record.timeSlot
-      );
+  item.shuboNumber === record.shuboNumber &&
+  item.dayNumber === record.dayNumber
+);
 
       if (index >= 0) {
         const updated = [...current];

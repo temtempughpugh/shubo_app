@@ -4,6 +4,7 @@ import type {
   DailyRecordData,
   MergedShuboData
 } from '../utils/types';
+import { Fragment } from 'react';
 import { STORAGE_KEYS } from '../utils/types';
 import ShuboDetailExpansion from './ShuboDetailExpansion';
 import { generateDailyRecords } from '../utils/dataUtils';
@@ -31,8 +32,6 @@ interface DailyEnvironment {
 interface BrewingInput {
   [shuboNumber: number]: {
     iceAmount: number | null;
-    mizukoujiTemperature: number | null;
-    brewingTemperature: number | null;
     afterBrewingKensyaku: number | null;
   };
 }
@@ -43,18 +42,6 @@ interface DischargeInput {
     afterDischargeCapacity: number | null;
     destinationTank: string;
     dischargeWater: number | null;
-  };
-}
-
-interface AnalysisInput {
-  [shuboNumber: number]: {
-    [dateKey: string]: {
-      temperature: number | null;
-      baume: number | null;
-      acidity: number | null;
-      temperatureAfterHeating: number | null;
-      memo: string;
-    };
   };
 }
 
@@ -78,11 +65,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
     return saved ? JSON.parse(saved) : {};
   });
 
-  const [analysisInput, setAnalysisInput] = useState<AnalysisInput>(() => {
-    const saved = localStorage.getItem('shubo_analysis_input');
-    return saved ? JSON.parse(saved) : {};
-  });
-
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.DAILY_ENVIRONMENT, JSON.stringify(dailyEnvironment));
   }, [dailyEnvironment]);
@@ -94,10 +76,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.DISCHARGE_SCHEDULE, JSON.stringify(dischargeInput));
   }, [dischargeInput]);
-
-  useEffect(() => {
-    localStorage.setItem('shubo_analysis_input', JSON.stringify(analysisInput));
-  }, [analysisInput]);
 
   const getDateKey = (date: Date): string => {
     return date.toISOString().split('T')[0];
@@ -182,11 +160,43 @@ export default function Dashboard({ dataContext }: DashboardProps) {
       return existing;
     }
     
-    return generateDailyRecords(shubo);
+    const records = generateDailyRecords(shubo);
+    records.forEach(record => {
+      dataContext.updateDailyRecord(record);
+    });
+    return records;
   };
 
   const handleUpdateRecord = (record: DailyRecordData) => {
     dataContext.updateDailyRecord(record);
+  };
+
+  // DailyRecordDataから本日の分析データを取得
+  const getTodayAnalysisRecord = (shuboNumber: number, dayNumber: number): DailyRecordData | null => {
+    const records = dataContext.getDailyRecords(shuboNumber);
+    return records.find(r => r.dayNumber === dayNumber) || null;
+  };
+
+  // DailyRecordDataから1日目のデータを取得（仕込み予定用）
+  const getDay1Record = (shuboNumber: number): DailyRecordData | null => {
+    const records = dataContext.getDailyRecords(shuboNumber);
+    return records.find(r => r.dayNumber === 1) || null;
+  };
+
+  // 分析予定のデータを更新
+  const updateAnalysisRecord = (shuboNumber: number, dayNumber: number, updates: Partial<DailyRecordData>) => {
+    const record = getTodayAnalysisRecord(shuboNumber, dayNumber);
+    if (record) {
+      dataContext.updateDailyRecord({ ...record, ...updates });
+    }
+  };
+
+  // 仕込み予定のデータを更新（1日目）
+  const updateBrewingRecord = (shuboNumber: number, updates: Partial<DailyRecordData>) => {
+    const record = getDay1Record(shuboNumber);
+    if (record) {
+      dataContext.updateDailyRecord({ ...record, ...updates });
+    }
   };
 
   const todayWorks = useMemo(() => {
@@ -385,14 +395,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                   <tbody>
                     {todayWorks.analysisSchedules.map(shubo => {
                       const dayNum = calculateDayNumber(shubo.shuboStartDate, currentDate);
-                      const shuboAnalysis = analysisInput[shubo.primaryNumber] || {};
-                      const currentAnalysis = shuboAnalysis[currentDateKey] || {
-                        temperature: null,
-                        baume: null,
-                        acidity: null,
-                        temperatureAfterHeating: null,
-                        memo: ''
-                      };
+                      const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
 
                       return (
                         <tr key={shubo.primaryNumber} className="border-b hover:bg-slate-50">
@@ -402,16 +405,9 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                             <input 
                               type="number" 
                               step="0.1" 
-                              value={currentAnalysis.temperature || ''} 
-                              onChange={(e) => setAnalysisInput({
-                                ...analysisInput,
-                                [shubo.primaryNumber]: {
-                                  ...shuboAnalysis,
-                                  [currentDateKey]: {
-                                    ...currentAnalysis,
-                                    temperature: e.target.value ? parseFloat(e.target.value) : null
-                                  }
-                                }
+                              value={record?.temperature1 ?? ''} 
+                              onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
+                                temperature1: e.target.value ? parseFloat(e.target.value) : null
                               })}
                               placeholder="20.5" 
                               className="w-14 px-1 py-1 text-xs border rounded" 
@@ -421,16 +417,9 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                             <input 
                               type="number" 
                               step="0.1" 
-                              value={currentAnalysis.baume || ''} 
-                              onChange={(e) => setAnalysisInput({
-                                ...analysisInput,
-                                [shubo.primaryNumber]: {
-                                  ...shuboAnalysis,
-                                  [currentDateKey]: {
-                                    ...currentAnalysis,
-                                    baume: e.target.value ? parseFloat(e.target.value) : null
-                                  }
-                                }
+                              value={record?.baume ?? ''} 
+                              onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
+                                baume: e.target.value ? parseFloat(e.target.value) : null
                               })}
                               placeholder="10.5" 
                               className="w-14 px-1 py-1 text-xs border rounded" 
@@ -440,16 +429,9 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                             <input 
                               type="number" 
                               step="0.1" 
-                              value={currentAnalysis.acidity || ''} 
-                              onChange={(e) => setAnalysisInput({
-                                ...analysisInput,
-                                [shubo.primaryNumber]: {
-                                  ...shuboAnalysis,
-                                  [currentDateKey]: {
-                                    ...currentAnalysis,
-                                    acidity: e.target.value ? parseFloat(e.target.value) : null
-                                  }
-                                }
+                              value={record?.acidity ?? ''} 
+                              onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
+                                acidity: e.target.value ? parseFloat(e.target.value) : null
                               })}
                               placeholder="2.5" 
                               className="w-14 px-1 py-1 text-xs border rounded" 
@@ -459,16 +441,9 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                             <input 
                               type="number" 
                               step="0.1" 
-                              value={currentAnalysis.temperatureAfterHeating || ''} 
-                              onChange={(e) => setAnalysisInput({
-                                ...analysisInput,
-                                [shubo.primaryNumber]: {
-                                  ...shuboAnalysis,
-                                  [currentDateKey]: {
-                                    ...currentAnalysis,
-                                    temperatureAfterHeating: e.target.value ? parseFloat(e.target.value) : null
-                                  }
-                                }
+                              value={record?.temperature2 ?? ''} 
+                              onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
+                                temperature2: e.target.value ? parseFloat(e.target.value) : null
                               })}
                               placeholder="22.0" 
                               className="w-14 px-1 py-1 text-xs border rounded" 
@@ -477,16 +452,9 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                           <td className="px-2 py-2">
                             <input 
                               type="text" 
-                              value={currentAnalysis.memo || ''} 
-                              onChange={(e) => setAnalysisInput({
-                                ...analysisInput,
-                                [shubo.primaryNumber]: {
-                                  ...shuboAnalysis,
-                                  [currentDateKey]: {
-                                    ...currentAnalysis,
-                                    memo: e.target.value
-                                  }
-                                }
+                              value={record?.memo ?? ''} 
+                              onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
+                                memo: e.target.value
                               })}
                               placeholder="順調" 
                               className="w-full px-2 py-1 text-xs border rounded" 
@@ -615,6 +583,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                       {todayWorks.brewingSchedules.map(shubo => {
                         const isDual = shubo.primaryNumber !== shubo.secondaryNumber;
                         const expectedMeasurement = shubo.recipeData.measurement;
+                        const record = getDay1Record(shubo.primaryNumber);
                         
                         let measurementDisplay = `${expectedMeasurement}L`;
                         
@@ -629,11 +598,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                           }
                         }
                         
-                        const input = brewingInput[shubo.primaryNumber] || { 
-                          mizukoujiTemperature: null, 
-                          brewingTemperature: null, 
-                          afterBrewingKensyaku: null 
-                        };
+                        const input = brewingInput[shubo.primaryNumber] || { afterBrewingKensyaku: null };
                         const capacity = input.afterBrewingKensyaku 
                           ? getCapacityFromKensyaku(shubo.selectedTankId, input.afterBrewingKensyaku) 
                           : null;
@@ -648,13 +613,9 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                             <td className="px-2 py-2">
                               <input 
                                 type="number" 
-                                value={input.mizukoujiTemperature || ''} 
-                                onChange={(e) => setBrewingInput({
-                                  ...brewingInput,
-                                  [shubo.primaryNumber]: {
-                                    ...input,
-                                    mizukoujiTemperature: e.target.value ? parseFloat(e.target.value) : null
-                                  }
+                                value={record?.temperature1 ?? ''} 
+                                onChange={(e) => updateBrewingRecord(shubo.primaryNumber, {
+                                  temperature1: e.target.value ? parseFloat(e.target.value) : null
                                 })}
                                 placeholder="15" 
                                 className="w-12 px-1 py-1 text-xs border rounded" 
@@ -663,13 +624,9 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                             <td className="px-2 py-2">
                               <input 
                                 type="number" 
-                                value={input.brewingTemperature || ''} 
-                                onChange={(e) => setBrewingInput({
-                                  ...brewingInput,
-                                  [shubo.primaryNumber]: {
-                                    ...input,
-                                    brewingTemperature: e.target.value ? parseFloat(e.target.value) : null
-                                  }
+                                value={record?.temperature2 ?? ''} 
+                                onChange={(e) => updateBrewingRecord(shubo.primaryNumber, {
+                                  temperature2: e.target.value ? parseFloat(e.target.value) : null
                                 })}
                                 placeholder="18" 
                                 className="w-12 px-1 py-1 text-xs border rounded" 
@@ -861,9 +818,8 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                   const isExpanded = expandedShubo === shubo.primaryNumber;
 
                   return (
-                    <>
+                    <Fragment key={shubo.primaryNumber}>
                       <tr 
-                        key={shubo.primaryNumber} 
                         onClick={() => handleShuboClick(shubo.primaryNumber)}
                         className={`border-b hover:bg-slate-50 cursor-pointer ${shubo.status === '管理中' ? 'bg-green-50' : ''}`}
                       >
@@ -884,7 +840,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                           })()}
                         </td>
                         <td className="px-3 py-2">
-                          {shubo.shuboEndDates.map((endDate, i) => {
+                          {shubo.shuboEndDates.map((endDate) => {
                             const date = endDate instanceof Date ? endDate : new Date(endDate);
                             return date.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
                           }).join(', ')}
@@ -906,7 +862,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                           onUpdateRecord={handleUpdateRecord}
                         />
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>

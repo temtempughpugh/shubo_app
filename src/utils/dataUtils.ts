@@ -40,13 +40,19 @@ export function dateToKey(date: Date): string {
 }
 
 // 日別記録生成
+// 日別記録生成
 export function generateDailyRecords(shubo: MergedShuboData): DailyRecordData[] {
   const records: DailyRecordData[] = [];
-  const startDate = new Date(shubo.shuboStartDate);
+  
+  // shuboStartDateを確実にDate型に変換
+  const startDate = shubo.shuboStartDate instanceof Date 
+    ? new Date(shubo.shuboStartDate.getTime()) 
+    : new Date(shubo.shuboStartDate);
+  
   const totalDays = shubo.maxShuboDays;
 
   for (let day = 1; day <= totalDays; day++) {
-    const recordDate = new Date(startDate);
+    const recordDate = new Date(startDate.getTime());
     recordDate.setDate(startDate.getDate() + (day - 1));
 
     let dayLabel = '-';
@@ -60,7 +66,7 @@ export function generateDailyRecords(shubo: MergedShuboData): DailyRecordData[] 
 
     records.push({
       shuboNumber: shubo.primaryNumber,
-      recordDate,
+      recordDate: recordDate,  // 確実にDate型
       dayNumber: day,
       dayLabel,
       timeSlot: '1-1',

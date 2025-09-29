@@ -34,12 +34,14 @@ export default function ShuboDetailExpansion({
     setLocalRecords(updatedRecords);
   };
 
+  console.log('ShuboDetailExpansion records:', localRecords.length, localRecords.map(r => r.dayNumber));
+
   return (
     <tr>
       <td colSpan={8} className="bg-slate-50 p-4">
         <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
           <div className="bg-blue-600 px-4 py-2">
-            <h4 className="text-white font-bold text-sm">📊 日別記録テーブル</h4>
+            <h4 className="text-white font-bold text-sm">📊 日別記録テーブル ({localRecords.length}日分)</h4>
           </div>
           
           <div className="overflow-x-auto">
