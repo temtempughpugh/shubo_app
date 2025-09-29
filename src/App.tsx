@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
+import Dashboard from './components/Dashboard';
 import TankAssignment from './components/TankAssignment';
 import TankSettings from './components/TankSettings';
 import { useData } from './hooks/useData';
 
-type Page = 'tank-assignment' | 'tank-settings';
+type Page = 'dashboard' | 'tank-assignment' | 'tank-settings';
 
 export default function App() {
   const dataContext = useData();
-  const [currentPage, setCurrentPage] = useState<Page>('tank-assignment');
+  const [currentPage, setCurrentPage] = useState<Page>('dashboard');
 
   // 読み込み中
   if (dataContext.isLoading) {
@@ -40,20 +41,68 @@ export default function App() {
     );
   }
 
-  // メイン画面
-  if (currentPage === 'tank-settings') {
-    return (
-      <TankSettings 
-        dataContext={dataContext}
-        onBack={() => setCurrentPage('tank-assignment')}
-      />
-    );
-  }
-
   return (
-    <TankAssignment 
-      dataContext={dataContext}
-      onTankSettings={() => setCurrentPage('tank-settings')}
-    />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* ナビゲーションバー */}
+      <nav className="bg-gradient-to-r from-blue-700 to-blue-900 text-white shadow-xl">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold">🍶 酒母管理システム</h1>
+            
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setCurrentPage('dashboard')}
+                className={`px-5 py-2.5 rounded-lg font-bold transition-all duration-200 ${
+                  currentPage === 'dashboard'
+                    ? 'bg-white text-blue-700 shadow-lg'
+                    : 'bg-blue-800 hover:bg-blue-700 text-blue-100'
+                }`}
+              >
+                📊 ダッシュボード
+              </button>
+              <button
+                onClick={() => setCurrentPage('tank-assignment')}
+                className={`px-5 py-2.5 rounded-lg font-bold transition-all duration-200 ${
+                  currentPage === 'tank-assignment'
+                    ? 'bg-white text-blue-700 shadow-lg'
+                    : 'bg-blue-800 hover:bg-blue-700 text-blue-100'
+                }`}
+              >
+                🏭 タンク割り当て
+              </button>
+              <button
+                onClick={() => setCurrentPage('tank-settings')}
+                className={`px-5 py-2.5 rounded-lg font-bold transition-all duration-200 ${
+                  currentPage === 'tank-settings'
+                    ? 'bg-white text-blue-700 shadow-lg'
+                    : 'bg-blue-800 hover:bg-blue-700 text-blue-100'
+                }`}
+              >
+                ⚙️ タンク設定
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* メインコンテンツ */}
+      <main>
+        {currentPage === 'dashboard' && (
+          <Dashboard dataContext={dataContext} />
+        )}
+        {currentPage === 'tank-assignment' && (
+          <TankAssignment 
+            dataContext={dataContext}
+            onTankSettings={() => setCurrentPage('tank-settings')}
+          />
+        )}
+        {currentPage === 'tank-settings' && (
+          <TankSettings 
+            dataContext={dataContext}
+            onBack={() => setCurrentPage('tank-assignment')}
+          />
+        )}
+      </main>
+    </div>
   );
 }

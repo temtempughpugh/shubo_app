@@ -211,6 +211,7 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
       },
       dualShuboInfo: {
         isDualShubo: isDual,
+         isPrimary: isDualPrimary,  // ← この行を追加
         primaryNumber,
         secondaryNumber,
         combinedDisplayName,

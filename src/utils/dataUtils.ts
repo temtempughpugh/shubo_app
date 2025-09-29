@@ -1,4 +1,4 @@
-import type { ShuboRawData, RecipeRawData, TankConversionRawData } from './types';
+import type { ShuboRawData, RecipeRawData, TankConversionRawData, ConfiguredShuboData, MergedShuboData } from './types';
 
 // Excelシリアル値をJavaScript Dateに変換
 export function convertExcelDateToJs(excelDate: number): Date {
@@ -40,7 +40,6 @@ export async function loadCSV(filepath: string): Promise<string[][]> {
     const text = await response.text();
     const lines = text.split('\n').filter(line => line.trim());
     
-    // 区切り文字判定
     const separators = [',', '\t', ';'];
     let bestSeparator = ',';
     let maxColumns = 0;
@@ -94,8 +93,6 @@ export function parseShuboCSV(csvData: string[][]): ShuboRawData[] {
     if (row.length < 10) continue;
     
     const shuboTotalRice = parseInt(row[22]) || 0;
-    
-    // モト総米が0kgの行は除外
     if (shuboTotalRice === 0) continue;
     
     const shuboData: ShuboRawData = {
@@ -231,12 +228,11 @@ export function convertKensyakuToCapacity(
   return match ? match.capacity : null;
 }
 
-// 2個酛判定（重複防止版）
+// 2個酛判定（Raw Data用・旧バージョン - 互換性のため残す）
 export function checkDualShubo(shuboList: ShuboRawData[]): boolean[] {
   const isDualFlags = new Array(shuboList.length).fill(false);
   
   for (let i = 0; i < shuboList.length - 1; i++) {
-    // 既にペアに属している場合はスキップ
     if (isDualFlags[i]) continue;
     
     const current = shuboList[i];
@@ -254,7 +250,161 @@ export function checkDualShubo(shuboList: ShuboRawData[]): boolean[] {
   return isDualFlags;
 }
 
-// 2個酛統合表示
+// ConfiguredShuboDataから2個酛を判定（新バージョン）
+export function checkDualShuboFromConfigured(
+  configuredList: ConfiguredShuboData[]
+): Map<number, { isDual: boolean; isPrimary: boolean; pairNumber: number | null }> {
+  const dualMap = new Map<number, { isDual: boolean; isPrimary: boolean; pairNumber: number | null }>();
+  
+  configuredList.forEach(shubo => {
+    dualMap.set(shubo.shuboNumber, { isDual: false, isPrimary: false, pairNumber: null });
+  });
+  
+  const sortedList = [...configuredList].sort((a, b) => a.shuboNumber - b.shuboNumber);
+  
+  for (let i = 0; i < sortedList.length - 1; i++) {
+    const current = sortedList[i];
+    const next = sortedList[i + 1];
+    
+    const isConsecutive = next.shuboNumber === current.shuboNumber + 1;
+    const sameTank = current.selectedTankId === next.selectedTankId;
+    const currentDate = current.shuboStartDate instanceof Date 
+      ? current.shuboStartDate 
+      : new Date(current.shuboStartDate);
+    const nextDate = next.shuboStartDate instanceof Date 
+      ? next.shuboStartDate 
+      : new Date(next.shuboStartDate);
+    const sameStartDate = currentDate.getTime() === nextDate.getTime();
+    
+    if (isConsecutive && sameTank && sameStartDate) {
+      dualMap.set(current.shuboNumber, { 
+        isDual: true, 
+        isPrimary: true, 
+        pairNumber: next.shuboNumber 
+      });
+      dualMap.set(next.shuboNumber, { 
+        isDual: true, 
+        isPrimary: false, 
+        pairNumber: current.shuboNumber 
+      });
+    }
+  }
+  
+  return dualMap;
+}
+
+// 統合酒母データを生成
+export function createMergedShuboData(
+  configuredList: ConfiguredShuboData[]
+): MergedShuboData[] {
+  const dualMap = checkDualShuboFromConfigured(configuredList);
+  const mergedList: MergedShuboData[] = [];
+  const processed = new Set<number>();
+  
+  const sortedList = [...configuredList].sort((a, b) => a.shuboNumber - b.shuboNumber);
+  
+  for (const shubo of sortedList) {
+    if (processed.has(shubo.shuboNumber)) continue;
+    
+    const dualInfo = dualMap.get(shubo.shuboNumber);
+    
+    if (dualInfo?.isDual && dualInfo.isPrimary) {
+      const secondary = configuredList.find(s => s.shuboNumber === dualInfo.pairNumber);
+      if (!secondary) continue;
+      
+      const mergedData: MergedShuboData = {
+        displayName: `${shubo.shuboNumber}・${secondary.shuboNumber}号`,
+        selectedTankId: shubo.selectedTankId,
+        shuboType: shubo.shuboType,
+        primaryNumber: shubo.shuboNumber,
+        secondaryNumber: secondary.shuboNumber,
+        shuboStartDate: shubo.shuboStartDate,
+        shuboEndDates: [shubo.shuboEndDate, secondary.shuboEndDate],
+        maxShuboDays: Math.max(shubo.shuboDays, secondary.shuboDays),
+        recipeData: {
+          totalRice: shubo.recipeData.totalRice + secondary.recipeData.totalRice,
+          steamedRice: shubo.recipeData.steamedRice + secondary.recipeData.steamedRice,
+          kojiRice: shubo.recipeData.kojiRice + secondary.recipeData.kojiRice,
+          water: shubo.recipeData.water + secondary.recipeData.water,
+          measurement: shubo.recipeData.measurement + secondary.recipeData.measurement,
+          lacticAcid: shubo.recipeData.lacticAcid + secondary.recipeData.lacticAcid
+        },
+        tankData: shubo.tankData,
+        originalData: [shubo.originalData, secondary.originalData]
+      };
+      
+      mergedList.push(mergedData);
+      processed.add(shubo.shuboNumber);
+      processed.add(secondary.shuboNumber);
+      
+    } else if (!dualInfo?.isDual) {
+      const mergedData: MergedShuboData = {
+        displayName: `${shubo.shuboNumber}号`,
+        selectedTankId: shubo.selectedTankId,
+        shuboType: shubo.shuboType,
+        primaryNumber: shubo.shuboNumber,
+        secondaryNumber: shubo.shuboNumber,
+        shuboStartDate: shubo.shuboStartDate,
+        shuboEndDates: [shubo.shuboEndDate],
+        maxShuboDays: shubo.shuboDays,
+        recipeData: shubo.recipeData,
+        tankData: shubo.tankData,
+        originalData: [shubo.originalData]
+      };
+      
+      mergedList.push(mergedData);
+      processed.add(shubo.shuboNumber);
+    }
+  }
+  
+  return mergedList;
+}
+
+// ConfiguredShuboDataの表示名を更新（タンク割り当て画面用）
+export function updateDualShuboDisplayNames(
+  configuredList: ConfiguredShuboData[]
+): ConfiguredShuboData[] {
+  const dualMap = checkDualShuboFromConfigured(configuredList);
+  
+  return configuredList.map(shubo => {
+    const dualInfo = dualMap.get(shubo.shuboNumber);
+    
+    if (dualInfo?.isDual) {
+      const pairNumber = dualInfo.pairNumber!;
+      const displayName = dualInfo.isPrimary 
+        ? `${shubo.shuboNumber}・${pairNumber}号 (1/2)`
+        : `${pairNumber}・${shubo.shuboNumber}号 (2/2)`;
+      
+      return {
+        ...shubo,
+        displayName,
+        dualShuboInfo: {
+          isDualShubo: true,
+          isPrimary: dualInfo.isPrimary,
+          primaryNumber: dualInfo.isPrimary ? shubo.shuboNumber : pairNumber,
+          secondaryNumber: dualInfo.isPrimary ? pairNumber : shubo.shuboNumber,
+          combinedDisplayName: dualInfo.isPrimary 
+            ? `${shubo.shuboNumber}・${pairNumber}号`
+            : `${pairNumber}・${shubo.shuboNumber}号`
+        }
+      };
+    }
+    
+    return {
+      ...shubo,
+      displayName: `${shubo.shuboNumber}号`,
+      dualShuboInfo: {
+        isDualShubo: false,
+        isPrimary: true,
+        primaryNumber: shubo.shuboNumber,
+        secondaryNumber: undefined,
+        combinedDisplayName: `${shubo.shuboNumber}号`
+      }
+    };
+  });
+}
+
+// 2個酛統合表示（旧関数・互換性のため残す）
 export function formatDualValue(isDual: boolean, total: number, unit: string): string {
   if (!isDual) return `${total}${unit}`;
   const individual = total / 2;

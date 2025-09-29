@@ -4,6 +4,7 @@ import type {
   RecipeRawData, 
   TankConversionRawData, 
   ConfiguredShuboData,
+  MergedShuboData,
   TankConfigData,
   DailyRecordData 
 } from '../utils/types';
@@ -13,7 +14,8 @@ import {
   parseShuboCSV, 
   parseRecipeCSV, 
   parseTankConversionCSV,
-  convertExcelDateToJs
+  createMergedShuboData,
+  updateDualShuboDisplayNames
 } from '../utils/dataUtils';
 import { useLocalStorage } from './useLocalStorage';
 
@@ -26,6 +28,10 @@ export function useData() {
   // Processed Data (localStorage)
   const [configuredShuboData, setConfiguredShuboData] = useLocalStorage<ConfiguredShuboData[]>(
     STORAGE_KEYS.CONFIGURED_SHUBO_DATA, 
+    []
+  );
+  const [mergedShuboData, setMergedShuboData] = useLocalStorage<MergedShuboData[]>(
+    STORAGE_KEYS.MERGED_SHUBO_DATA,
     []
   );
   const [tankConfigData, setTankConfigData] = useLocalStorage<TankConfigData[]>(
@@ -46,19 +52,37 @@ export function useData() {
     loadAllCSVData();
   }, []);
 
+  // configuredShuboDataが変更されたら統合データを更新
+  useEffect(() => {
+    if (configuredShuboData.length > 0) {
+      // 表示名を更新
+      const updatedConfigured = updateDualShuboDisplayNames(configuredShuboData);
+      const hasChanged = JSON.stringify(updatedConfigured) !== JSON.stringify(configuredShuboData);
+      
+      if (hasChanged) {
+        setConfiguredShuboData(updatedConfigured);
+      }
+      
+      // 統合データを生成
+      const merged = createMergedShuboData(configuredShuboData);
+      setMergedShuboData(merged);
+    }
+  }, [
+    configuredShuboData.length,
+    configuredShuboData.map(s => `${s.shuboNumber}-${s.selectedTankId}-${s.shuboStartDate}`).join(',')
+  ]);
+
   async function loadAllCSVData() {
     try {
       setIsLoading(true);
       setLoadError(null);
 
-      // 並行してCSV読み込み
       const [shuboCSV, recipeCSV, tankCSV] = await Promise.all([
         loadCSV('/data/shubo.csv'),
         loadCSV('/data/shubo_sikomi.csv'),
         loadCSV('/data/tank_quick_reference.csv')
       ]);
 
-      // データ解析
       const parsedShuboData = parseShuboCSV(shuboCSV);
       const parsedRecipeData = parseRecipeCSV(recipeCSV);
       const parsedTankMap = parseTankConversionCSV(tankCSV);
@@ -67,7 +91,6 @@ export function useData() {
       setRecipeRawData(parsedRecipeData);
       setTankConversionMap(parsedTankMap);
 
-      // 初回起動時のタンク設定初期化
       if (tankConfigData.length === 0) {
         initializeTankConfig(parsedTankMap);
       }
@@ -86,25 +109,22 @@ export function useData() {
     }
   }
 
-  // タンク設定初期化
   function initializeTankConfig(tankMap: Map<string, TankConversionRawData[]>) {
     const tankConfigs: TankConfigData[] = [];
 
     tankMap.forEach((conversions, tankId) => {
       if (conversions.length === 0) return;
 
-      // 最大容量（検尺0mmの容量）
       const maxCapacityData = conversions.find(conv => conv.kensyaku === 0);
       const maxCapacity = maxCapacityData?.capacity || 0;
 
-      // 推奨酒母タンクかどうか
       const isRecommended = RECOMMENDED_SHUBO_TANKS.includes(tankId as any);
 
       const tankConfig: TankConfigData = {
         tankId,
         displayName: `${tankId} (${maxCapacity}L)`,
         maxCapacity,
-        isEnabled: isRecommended, // 推奨タンクはデフォルト有効
+        isEnabled: isRecommended,
         isRecommended,
         currentStatus: '空き',
         availableDate: null,
@@ -114,27 +134,22 @@ export function useData() {
       tankConfigs.push(tankConfig);
     });
 
-    // 容量降順でソート
     tankConfigs.sort((a, b) => b.maxCapacity - a.maxCapacity);
     setTankConfigData(tankConfigs);
   }
 
-  // タンク変換取得
   function getTankConversions(tankId: string): TankConversionRawData[] {
     return tankConversionMap.get(tankId) || [];
   }
 
-  // 有効なタンク取得
   function getEnabledTanks(): TankConfigData[] {
     return tankConfigData.filter(tank => tank.isEnabled);
   }
 
-  // 推奨タンク取得
   function getRecommendedTanks(): TankConfigData[] {
     return tankConfigData.filter(tank => tank.isRecommended);
   }
 
-  // タンク設定更新
   function updateTankConfig(tankId: string, updates: Partial<TankConfigData>) {
     setTankConfigData(current => 
       current.map(tank => 
@@ -143,30 +158,25 @@ export function useData() {
     );
   }
 
-  // 設定済み酒母データ追加・更新
   function saveConfiguredShubo(data: ConfiguredShuboData) {
     setConfiguredShuboData(current => {
       const index = current.findIndex(item => item.shuboNumber === data.shuboNumber);
       if (index >= 0) {
-        // 更新
         const updated = [...current];
         updated[index] = data;
         return updated;
       } else {
-        // 新規追加
         return [...current, data];
       }
     });
   }
 
-  // 設定済み酒母データ削除
   function removeConfiguredShubo(shuboNumber: number) {
     setConfiguredShuboData(current => 
       current.filter(item => item.shuboNumber !== shuboNumber)
     );
   }
 
-  // 日別記録更新
   function updateDailyRecord(record: DailyRecordData) {
     setDailyRecordsData(current => {
       const index = current.findIndex(item => 
@@ -185,7 +195,6 @@ export function useData() {
     });
   }
 
-  // 酒母の日別記録取得
   function getDailyRecords(shuboNumber: number): DailyRecordData[] {
     return dailyRecordsData.filter(record => record.shuboNumber === shuboNumber);
   }
@@ -198,6 +207,7 @@ export function useData() {
     
     // Processed Data
     configuredShuboData,
+    mergedShuboData,
     tankConfigData,
     dailyRecordsData,
     

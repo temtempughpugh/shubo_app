@@ -57,11 +57,39 @@ export interface ConfiguredShuboData {
   };
   dualShuboInfo: {
     isDualShubo: boolean;
+    isPrimary: boolean;
     primaryNumber: number;
     secondaryNumber?: number;
     combinedDisplayName: string;
   };
   originalData: ShuboRawData;
+}
+
+// 統合酒母データ（ダッシュボード・酒母一覧用）
+export interface MergedShuboData {
+  displayName: string;
+  selectedTankId: string;
+  shuboType: string;
+  primaryNumber: number;
+  secondaryNumber: number;
+  shuboStartDate: Date;
+  shuboEndDates: Date[];
+  maxShuboDays: number;
+  recipeData: {
+    totalRice: number;
+    steamedRice: number;
+    kojiRice: number;
+    water: number;
+    measurement: number;
+    lacticAcid: number;
+  };
+  tankData: {
+    tankDisplayName: string;
+    maxCapacity: number;
+    waterKensyaku: number;
+    waterCapacity: number;
+  };
+  originalData: ShuboRawData[];
 }
 
 // 日別記録データ
@@ -92,13 +120,66 @@ export interface TankConfigData {
   memo: string;
 }
 
+// 日付別環境データ
+export interface DailyEnvironmentData {
+  date: Date;
+  temperature: number | null;
+  humidity: number | null;
+}
+
+// 仕込み準備データ
+export interface BrewingPreparationData {
+  shuboNumber: number;
+  displayName: string;
+  tankId: string;
+  waterAmount: number;
+  iceAmount: number | null;
+  preparationWater: number;
+  kensyaku: number | null;
+  capacity: number | null;
+  lacticAcid: number;
+}
+
+// 仕込み予定データ
+export interface BrewingScheduleData {
+  shuboNumber: number;
+  displayName: string;
+  tankId: string;
+  mizukoujiTemperature: number | null;
+  brewingTemperature: number | null;
+  afterBrewingKensyaku: number | null;
+  capacity: number | null;
+}
+
+// 卸し予定データ
+export interface DischargeScheduleData {
+  shuboNumber: number;
+  displayName: string;
+  tankId: string;
+  beforeDischargeKensyaku: number | null;
+  beforeDischargeCapacity: number | null;
+  afterDischargeKensyaku: number | null;
+  afterDischargeCapacity: number | null;
+  dischargeAmount: number | null;
+  destinationTank: string | null;
+  dischargeWater: number | null;
+  expectedMeasurement: number;
+  actualMeasurement: number | null;
+  measurementRatio: number | null;
+}
+
 // localStorage キー
 export const STORAGE_KEYS = {
   CONFIGURED_SHUBO_DATA: "shubo_configured_data",
+  MERGED_SHUBO_DATA: "shubo_merged_data",
   DAILY_RECORDS_DATA: "shubo_daily_records",
   TANK_CONFIG_DATA: "shubo_tank_config",
   ANALYSIS_SCHEDULE: "shubo_analysis_schedule",
   APP_SETTINGS: "shubo_app_settings",
+  DAILY_ENVIRONMENT: "shubo_daily_environment",
+  BREWING_PREPARATION: "shubo_brewing_preparation",
+  BREWING_SCHEDULE: "shubo_brewing_schedule",
+  DISCHARGE_SCHEDULE: "shubo_discharge_schedule",
 } as const;
 
 // 推奨酒母タンクリスト
