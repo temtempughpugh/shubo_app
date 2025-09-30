@@ -139,23 +139,25 @@ export default function ShuboDetailExpansion({
                   ? getCapacityFromKensyaku(shubo.selectedTankId, discharge.beforeDischargeKensyaku)
                   : null;
                 const afterCapacity = discharge.afterDischargeCapacity;
-                const dischargeAmount = beforeCapacity && afterCapacity
+                const dischargeAmount = beforeCapacity !== null && afterCapacity !== null
                   ? beforeCapacity - afterCapacity
                   : null;
                 
                 const kensyakuAfter = '-';
 
                 return (
-                  <div key={index} className="space-y-0.5">
+                 <div key={index} className="space-y-0.5">
                     <div className="text-xs">
                       <span className="text-slate-600">卸{index + 1}前尺:</span> <span className="font-semibold">{discharge.beforeDischargeKensyaku ? `${discharge.beforeDischargeKensyaku}mm` : '-'}</span>
                       <span className="text-slate-600 ml-1">/卸{index + 1}前容量:</span> <span className="font-semibold">{beforeCapacity ? `${beforeCapacity}L` : '-'}</span>
                     </div>
-                    <div className="text-xs">
-                      <span className="text-slate-600">卸{index + 1}後尺:</span> <span className="font-semibold">{kensyakuAfter}</span>
-                      <span className="text-slate-600 ml-1">/卸{index + 1}後容量:</span> <span className="font-semibold">{afterCapacity ? `${afterCapacity}L` : '-'}</span>
-                    </div>
-                    <div className="text-xs"><span className="text-slate-600">卸{index + 1}量:</span> <span className="font-semibold">{dischargeAmount ? `${dischargeAmount}L` : '-'}</span></div>
+                    {afterCapacity !== null && afterCapacity > 0 && (
+                      <div className="text-xs">
+                        <span className="text-slate-600">卸{index + 1}後尺:</span> <span className="font-semibold">{kensyakuAfter}</span>
+                        <span className="text-slate-600 ml-1">/卸{index + 1}後容量:</span> <span className="font-semibold">{afterCapacity}L</span>
+                      </div>
+                    )}
+                    <div className="text-xs"><span className="text-slate-600">卸{index + 1}量:</span> <span className="font-semibold">{dischargeAmount !== null ? `${dischargeAmount}L` : '-'}</span></div>
                   </div>
                 );
               })}

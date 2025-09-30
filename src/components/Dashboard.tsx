@@ -37,7 +37,7 @@ interface BrewingInput {
 }
 
 interface DischargeInput {
-  [shuboNumber: number]: {
+  [key: string]: {
     beforeDischargeKensyaku: number | null;
     afterDischargeCapacity: number | null;
     destinationTank: string;
@@ -231,7 +231,17 @@ export default function Dashboard({ dataContext }: DashboardProps) {
       if (status !== '管理中') return false;
       
       const dayNum = calculateDayNumber(shubo.shuboStartDate, currentDate);
-      return dayNum > 1;
+      if (dayNum > 1) {
+        const existing = dataContext.getDailyRecords(shubo.primaryNumber);
+        if (existing.length === 0) {
+          const records = generateDailyRecords(shubo);
+          records.forEach(record => {
+            dataContext.updateDailyRecord(record);
+          });
+        }
+        return true;
+      }
+      return false;
     });
 
     const dischargeSchedules = dataContext.mergedShuboData.filter(shubo => {
@@ -719,7 +729,15 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                   </thead>
                   <tbody>
                     {todayWorks.dischargeSchedules.map(shubo => {
-                      const input = dischargeInput[shubo.primaryNumber] || {
+                      const dischargeIndex = shubo.shuboEndDates.findIndex(endDate => {
+                        const date = endDate instanceof Date ? new Date(endDate) : new Date(endDate);
+                        date.setHours(0, 0, 0, 0);
+                        const today = new Date(currentDate);
+                        today.setHours(0, 0, 0, 0);
+                        return date.getTime() === today.getTime();
+                      });
+                      const inputKey = `${shubo.primaryNumber}-${dischargeIndex + 1}`;
+                      const input = dischargeInput[inputKey] || {
                         beforeDischargeKensyaku: null,
                         afterDischargeCapacity: null,
                         destinationTank: '',
@@ -746,7 +764,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                               value={input.beforeDischargeKensyaku || ''} 
                               onChange={(e) => setDischargeInput({
                                 ...dischargeInput,
-                                [shubo.primaryNumber]: {
+                                [inputKey]: {
                                   ...input,
                                   beforeDischargeKensyaku: e.target.value ? parseFloat(e.target.value) : null
                                 }
@@ -764,7 +782,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                               value={input.afterDischargeCapacity !== null ? input.afterDischargeCapacity : ''} 
                               onChange={(e) => setDischargeInput({
                                 ...dischargeInput,
-                                [shubo.primaryNumber]: {
+                                [inputKey]: {
                                   ...input,
                                   afterDischargeCapacity: e.target.value !== '' ? parseFloat(e.target.value) : null
                                 }
@@ -785,7 +803,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                               value={input.destinationTank} 
                               onChange={(e) => setDischargeInput({
                                 ...dischargeInput,
-                                [shubo.primaryNumber]: {
+                                [inputKey]: {
                                   ...input,
                                   destinationTank: e.target.value
                                 }
@@ -800,7 +818,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                               value={input.dischargeWater || ''} 
                               onChange={(e) => setDischargeInput({
                                 ...dischargeInput,
-                                [shubo.primaryNumber]: {
+                                [inputKey]: {
                                   ...input,
                                   dischargeWater: e.target.value ? parseFloat(e.target.value) : null
                                 }
@@ -891,8 +909,9 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                           onUpdateRecord={handleUpdateRecord}
                           brewingInput={brewingInput[shubo.primaryNumber]}
                           dischargeInput={
-                            shubo.shuboEndDates.map(() => {
-                              const input = dischargeInput[shubo.primaryNumber];
+                            shubo.shuboEndDates.map((_, index) => {
+                              const key = `${shubo.primaryNumber}-${index + 1}`;
+                              const input = dischargeInput[key];
                               return input || {
                                 beforeDischargeKensyaku: null,
                                 afterDischargeCapacity: null

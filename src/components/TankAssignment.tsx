@@ -187,6 +187,8 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
       combinedDisplayName = displayName;
     }
 
+    const calculatedDays = Math.floor((shuboEndDate.getTime() - shuboStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    
     return {
       shuboNumber,
       displayName,
@@ -194,7 +196,7 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
       shuboType,
       shuboStartDate,
       shuboEndDate,
-      shuboDays: shuboData.shuboDays,
+      shuboDays: calculatedDays,
       recipeData: {
         // 修正: すべてそのまま保存（半分にしない）
         totalRice: recipe.recipeTotalRice,

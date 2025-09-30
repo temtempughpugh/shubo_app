@@ -3,8 +3,10 @@ import Dashboard from './components/Dashboard';
 import TankAssignment from './components/TankAssignment';
 import TankSettings from './components/TankSettings';
 import { useData } from './hooks/useData';
+import CSVUpdate from './components/CSVUpdate';
+import AnalysisSettings from './components/AnalysisSettings';
 
-type Page = 'dashboard' | 'tank-assignment' | 'tank-settings';
+type Page = 'dashboard' | 'tank-assignment' | 'tank-settings' | 'analysis-settings' | 'csv-update';
 
 export default function App() {
   const dataContext = useData();
@@ -68,7 +70,27 @@ export default function App() {
                     : 'bg-blue-800 hover:bg-blue-700 text-blue-100'
                 }`}
               >
-                🏭 タンク割り当て
+                📊 タンク割り当て
+              </button>
+              <button
+                onClick={() => setCurrentPage('analysis-settings')}
+                className={`px-5 py-2.5 rounded-lg font-bold transition-all duration-200 ${
+                  currentPage === 'analysis-settings'
+                    ? 'bg-white text-blue-700 shadow-lg'
+                    : 'bg-blue-800 hover:bg-blue-700 text-blue-100'
+                }`}
+              >
+                📋 分析日設定
+              </button>
+              <button
+                onClick={() => setCurrentPage('csv-update')}
+                className={`px-5 py-2.5 rounded-lg font-bold transition-all duration-200 ${
+                  currentPage === 'csv-update'
+                    ? 'bg-white text-blue-700 shadow-lg'
+                    : 'bg-blue-800 hover:bg-blue-700 text-blue-100'
+                }`}
+              >
+                🔄 CSV更新
               </button>
               <button
                 onClick={() => setCurrentPage('tank-settings')}
@@ -102,6 +124,12 @@ export default function App() {
             onBack={() => setCurrentPage('tank-assignment')}
           />
         )}
+         {currentPage === 'analysis-settings' && (
+        <AnalysisSettings onClose={() => setCurrentPage('dashboard')} />
+      )}
+       {currentPage === 'csv-update' && (
+        <CSVUpdate dataContext={dataContext} onClose={() => setCurrentPage('dashboard')} />
+      )}
       </main>
     </div>
   );

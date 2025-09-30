@@ -43,7 +43,8 @@ export function dateToKey(date: Date): string {
 // 日別記録生成
 export function generateDailyRecords(shubo: MergedShuboData): DailyRecordData[] {
   const records: DailyRecordData[] = [];
-  
+  console.log('shubo.maxShuboDays:', shubo.maxShuboDays);
+console.log('typeof maxShuboDays:', typeof shubo.maxShuboDays);
   // shuboStartDateを確実にDate型に変換
   const startDate = shubo.shuboStartDate instanceof Date 
     ? new Date(shubo.shuboStartDate.getTime()) 
@@ -64,25 +65,33 @@ export function generateDailyRecords(shubo: MergedShuboData): DailyRecordData[] 
       dayLabel = '卸し';
     }
 
+    // デフォルト分析日の判定
+    // デフォルト分析日の判定
+    const savedSettings = localStorage.getItem('shubo_analysis_settings');
+    const settings = savedSettings ? JSON.parse(savedSettings) : { speed: [2, 7, 9], highTemp: [2, 5, 7] };
+    const defaultAnalysisDays = shubo.shuboType === '速醸' 
+      ? settings.speed 
+      : settings.highTemp;
+    const isDefaultAnalysisDay = day === totalDays || defaultAnalysisDays.includes(day);
     records.push({
       shuboNumber: shubo.primaryNumber,
-      recordDate: recordDate,  // 確実にDate型
+      recordDate: recordDate,
       dayNumber: day,
-        dayLabel: '-',
-        timeSlot: '1-1',
-        temperature: null,
-        temperature1: null,
-        temperature2: null,
-        temperature3: null,
-        temperatureAfterHeating: null,
-        baume: null,
-        acidity: null,
-        alcohol: null,
-        memo: '',
-        isAnalysisDay: false
-      });
+      dayLabel: dayLabel,
+      timeSlot: '1-1',
+      temperature: null,
+      temperature1: null,
+      temperature2: null,
+      temperature3: null,
+      temperatureAfterHeating: null,
+      baume: null,
+      acidity: null,
+      alcohol: null,
+      memo: '',
+      isAnalysisDay: isDefaultAnalysisDay
+    });
   }
-
+ console.log('Generated records count:', records.length);
   return records;
 }
 

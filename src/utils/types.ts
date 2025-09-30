@@ -176,6 +176,14 @@ export interface DischargeScheduleData {
   measurementRatio: number | null;
 }
 
+// CSV更新履歴
+export interface CSVUpdateHistory {
+  updateDate: Date;      // 更新日
+  executedAt: Date;      // 実行日時
+  updatedCount: number;  // 更新件数
+  keptCount: number;     // 保持件数
+}
+
 // localStorage キー
 export const STORAGE_KEYS = {
   CONFIGURED_SHUBO_DATA: "shubo_configured_data",
@@ -188,6 +196,8 @@ export const STORAGE_KEYS = {
   BREWING_PREPARATION: "shubo_brewing_preparation",
   BREWING_SCHEDULE: "shubo_brewing_schedule",
   DISCHARGE_SCHEDULE: "shubo_discharge_schedule",
+  ANALYSIS_SETTINGS: "shubo_analysis_settings",
+  CSV_UPDATE_HISTORY: "shubo_csv_update_history",
 } as const;
 
 // 推奨酒母タンクリスト
@@ -203,3 +213,14 @@ export const DEFAULT_ANALYSIS_DAYS = {
   speed: [2, 7, 9, "discharge"],
   highTemp: [2, 5, 7, "discharge"],
 } as const;
+
+// 分析日設定
+export interface AnalysisSettings {
+  speed: number[];      // 速醸のデフォルト分析日
+  highTemp: number[];   // 高温糖化のデフォルト分析日
+}
+
+export const DEFAULT_ANALYSIS_SETTINGS: AnalysisSettings = {
+  speed: [2, 6, 9],
+  highTemp: [2, 5, 7]
+};
