@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { loadCSV, parseShuboCSV, convertExcelDateToJs } from '../utils/dataUtils';
+import { parseShuboCSV, convertExcelDateToJs } from '../utils/dataUtils';
 import type { ShuboRawData, CSVUpdateHistory } from '../utils/types';
 import { STORAGE_KEYS } from '../utils/types';
 
@@ -21,7 +21,6 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
   } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // 更新履歴を取得
   const [history, setHistory] = useState<CSVUpdateHistory[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CSV_UPDATE_HISTORY);
     return saved ? JSON.parse(saved) : [];
@@ -42,20 +41,17 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
     try {
       setIsProcessing(true);
       
-      // ファイルを読み込み
       const text = await selectedFile.text();
       const lines = text.split('\n').filter(line => line.trim());
       const csvData = lines.map(line => line.split(','));
       const newShuboData = parseShuboCSV(csvData);
 
-      // 更新日以降の酒母を抽出
       const updateDateObj = new Date(updateDate);
       updateDateObj.setHours(0, 0, 0, 0);
 
       const toUpdate: number[] = [];
       const toKeep: number[] = [];
 
-      // 既存の設定済み酒母をチェック
       dataContext.configuredShuboData.forEach(config => {
         const startDate = new Date(config.shuboStartDate);
         startDate.setHours(0, 0, 0, 0);
@@ -67,7 +63,6 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
         }
       });
 
-      // 新規酒母もチェック
       newShuboData.forEach(shubo => {
         const startDate = convertExcelDateToJs(parseFloat(shubo.shuboStartDate));
         startDate.setHours(0, 0, 0, 0);
@@ -100,20 +95,21 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
     try {
       setIsProcessing(true);
 
-      // ファイルを public/data に保存（実際の実装では backend API が必要）
-      // ここでは簡易的に、LocalStorageの更新のみ実施
+      const text = await selectedFile.text();
+      const lines = text.split('\n').filter(line => line.trim());
+      const csvData = lines.map(line => line.split(','));
+      const newShuboData = parseShuboCSV(csvData);
 
-      // 更新対象の ConfiguredShuboData を削除
+      localStorage.setItem(STORAGE_KEYS.SHUBO_RAW_DATA, JSON.stringify(newShuboData));
+
       const currentConfigured = dataContext.configuredShuboData;
       const filtered = currentConfigured.filter(c => !preview.toUpdate.includes(c.shuboNumber));
       localStorage.setItem(STORAGE_KEYS.CONFIGURED_SHUBO_DATA, JSON.stringify(filtered));
 
-      // 更新対象の DailyRecords を削除
       const dailyRecords = JSON.parse(localStorage.getItem(STORAGE_KEYS.DAILY_RECORDS_DATA) || '[]');
       const filteredRecords = dailyRecords.filter((r: any) => !preview.toUpdate.includes(r.shuboNumber));
       localStorage.setItem(STORAGE_KEYS.DAILY_RECORDS_DATA, JSON.stringify(filteredRecords));
 
-      // 更新履歴を保存
       const newHistory: CSVUpdateHistory = {
         updateDate: new Date(updateDate),
         executedAt: new Date(),
@@ -124,7 +120,6 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
       localStorage.setItem(STORAGE_KEYS.CSV_UPDATE_HISTORY, JSON.stringify(updatedHistory));
       setHistory(updatedHistory);
 
-      // データを再読み込み
       await dataContext.reloadData();
 
       alert('CSV更新が完了しました');
@@ -157,7 +152,6 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
 
           <div className="p-8 space-y-6">
             
-            {/* 更新日入力 */}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">
                 更新日（この日以降に仕込む酒母を更新）
@@ -170,7 +164,6 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
               />
             </div>
 
-            {/* ファイル選択 */}
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-2">
                 shubo.csv ファイル
@@ -183,7 +176,6 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
               />
             </div>
 
-            {/* プレビューボタン */}
             <button
               onClick={handlePreview}
               disabled={!updateDate || !selectedFile || isProcessing}
@@ -192,7 +184,6 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
               {isProcessing ? '処理中...' : '更新対象を確認'}
             </button>
 
-            {/* プレビュー結果 */}
             {preview && (
               <div className="space-y-4">
                 <div className="border border-green-200 bg-green-50 rounded-xl p-4">
@@ -222,7 +213,6 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
           </div>
         </div>
 
-        {/* 更新履歴 */}
         {history.length > 0 && (
           <div className="bg-white rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden">
             <div className="bg-slate-600 px-6 py-3">

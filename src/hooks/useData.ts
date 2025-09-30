@@ -21,7 +21,11 @@ import { useLocalStorage } from './useLocalStorage';
 
 export function useData() {
   // CSV Raw Data
-  const [shuboRawData, setShuboRawData] = useState<ShuboRawData[]>([]);
+  // CSV Raw Data
+  const [shuboRawData, setShuboRawData] = useLocalStorage<ShuboRawData[]>(
+    STORAGE_KEYS.SHUBO_RAW_DATA,
+    []
+  );
   const [recipeRawData, setRecipeRawData] = useState<RecipeRawData[]>([]);
   const [tankConversionMap, setTankConversionMap] = useState<Map<string, TankConversionRawData[]>>(new Map());
   
@@ -73,33 +77,43 @@ export function useData() {
   ]);
 
   async function loadAllCSVData() {
-    try {
-      setIsLoading(true);
-      setLoadError(null);
+  try {
+    setIsLoading(true);
+    setLoadError(null);
 
-      const [shuboCSV, recipeCSV, tankCSV] = await Promise.all([
-        loadCSV('/data/shubo.csv'),
-        loadCSV('/data/shubo_sikomi.csv'),
-        loadCSV('/data/tank_quick_reference.csv')
-      ]);
+    // useLocalStorageが自動で読み込むので、データが空の時だけCSVから読み込む
+    let parsedShuboData: ShuboRawData[];
+    
+    if (shuboRawData.length === 0) {
+      // 初回のみCSVファイルから読み込み
+      const shuboCSV = await loadCSV('/data/shubo.csv');
+      parsedShuboData = parseShuboCSV(shuboCSV);
+      setShuboRawData(parsedShuboData); // useLocalStorageが自動保存
+    } else {
+      // 既にuseLocalStorageで読み込まれている
+      parsedShuboData = shuboRawData;
+    }
 
-      const parsedShuboData = parseShuboCSV(shuboCSV);
-      const parsedRecipeData = parseRecipeCSV(recipeCSV);
-      const parsedTankMap = parseTankConversionCSV(tankCSV);
+    const [recipeCSV, tankCSV] = await Promise.all([
+      loadCSV('/data/shubo_sikomi.csv'),
+      loadCSV('/data/tank_quick_reference.csv')
+    ]);
 
-      setShuboRawData(parsedShuboData);
-      setRecipeRawData(parsedRecipeData);
-      setTankConversionMap(parsedTankMap);
+    const parsedRecipeData = parseRecipeCSV(recipeCSV);
+    const parsedTankMap = parseTankConversionCSV(tankCSV);
 
-      if (tankConfigData.length === 0) {
-        initializeTankConfig(parsedTankMap);
-      }
+    setRecipeRawData(parsedRecipeData);
+    setTankConversionMap(parsedTankMap);
 
-      console.log('CSV読み込み完了:', {
-        酒母データ: parsedShuboData.length,
-        レシピデータ: parsedRecipeData.length,
-        タンクデータ: parsedTankMap.size
-      });
+    if (tankConfigData.length === 0) {
+      initializeTankConfig(parsedTankMap);
+    }
+
+    console.log('CSV読み込み完了:', {
+      酒母データ: parsedShuboData.length,
+      レシピデータ: parsedRecipeData.length,
+      タンクデータ: parsedTankMap.size
+    });
 
     } catch (error) {
       console.error('CSV読み込みエラー:', error);

@@ -186,6 +186,7 @@ export interface CSVUpdateHistory {
 
 // localStorage キー
 export const STORAGE_KEYS = {
+SHUBO_RAW_DATA: "shubo_raw_data",
   CONFIGURED_SHUBO_DATA: "shubo_configured_data",
   MERGED_SHUBO_DATA: "shubo_merged_data",
   DAILY_RECORDS_DATA: "shubo_daily_records",
