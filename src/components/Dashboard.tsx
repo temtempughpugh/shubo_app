@@ -160,11 +160,14 @@ export default function Dashboard({ dataContext }: DashboardProps) {
       return existing;
     }
     
+    // レコードが存在しない場合は生成
     const records = generateDailyRecords(shubo);
     records.forEach(record => {
       dataContext.updateDailyRecord(record);
     });
-    return records;
+    
+    // 生成後に再取得
+    return dataContext.getDailyRecords(shubo.primaryNumber);
   };
 
   const handleUpdateRecord = (record: DailyRecordData) => {
@@ -373,7 +376,27 @@ export default function Dashboard({ dataContext }: DashboardProps) {
 
         <div className="bg-white rounded-xl shadow-lg border border-slate-200/50 overflow-hidden">
           <div className="bg-orange-600 px-4 py-2">
-            <h3 className="text-base font-bold text-white">🔬 本日の作業 - 分析予定</h3>
+            <h3 className="text-base font-bold text-white">
+              🔬 本日の作業 - 分析予定
+              {(() => {
+                const analysisToday = todayWorks.analysisSchedules
+                  .map(shubo => {
+                    const dayNum = calculateDayNumber(shubo.shuboStartDate, currentDate);
+                    const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
+                    if (record?.isAnalysisDay) {
+                      return `${shubo.displayName} ${dayNum}日目`;
+                    }
+                    return null;
+                  })
+                  .filter(item => item !== null);
+                
+                return analysisToday.length > 0 ? (
+                  <span className="ml-2 text-sm font-normal">
+                    ({analysisToday.join('、')})
+                  </span>
+                ) : null;
+              })()}
+            </h3>
           </div>
           <div className="p-4">
             {todayWorks.analysisSchedules.length === 0 ? (
@@ -383,6 +406,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-slate-100 border-b">
+                      <th className="px-2 py-2 text-left text-xs font-bold">採取</th>
                       <th className="px-2 py-2 text-left text-xs font-bold">酒母名</th>
                       <th className="px-2 py-2 text-left text-xs font-bold">日数</th>
                       <th className="px-2 py-2 text-left text-xs font-bold">品温</th>
@@ -399,6 +423,11 @@ export default function Dashboard({ dataContext }: DashboardProps) {
 
                       return (
                         <tr key={shubo.primaryNumber} className="border-b hover:bg-slate-50">
+                          <td className="px-2 py-2 text-center">
+                            {record?.isAnalysisDay ? (
+                              <span className="text-blue-600 font-bold text-lg">○</span>
+                            ) : null}
+                          </td>
                           <td className="px-2 py-2 font-bold text-blue-700 text-xs">{shubo.displayName}</td>
                           <td className="px-2 py-2 text-xs">{dayNum}日目</td>
                           <td className="px-2 py-2">
@@ -860,6 +889,17 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                           records={getShuboRecords(shubo)}
                           dailyEnvironment={dailyEnvironment}
                           onUpdateRecord={handleUpdateRecord}
+                          brewingInput={brewingInput[shubo.primaryNumber]}
+                          dischargeInput={
+                            shubo.shuboEndDates.map(() => {
+                              const input = dischargeInput[shubo.primaryNumber];
+                              return input || {
+                                beforeDischargeKensyaku: null,
+                                afterDischargeCapacity: null
+                              };
+                            })
+                          }
+                          getCapacityFromKensyaku={getCapacityFromKensyaku}
                         />
                       )}
                     </Fragment>

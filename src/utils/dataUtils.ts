@@ -68,18 +68,19 @@ export function generateDailyRecords(shubo: MergedShuboData): DailyRecordData[] 
       shuboNumber: shubo.primaryNumber,
       recordDate: recordDate,  // 確実にDate型
       dayNumber: day,
-      dayLabel,
-      timeSlot: '1-1',
-      temperature: null,
-      temperature1: null,
-      temperature2: null,
-      temperatureAfterHeating: null,
-      baume: null,
-      acidity: null,
-      alcohol: null,
-      memo: '',
-      isAnalysisDay: false
-    });
+        dayLabel: '-',
+        timeSlot: '1-1',
+        temperature: null,
+        temperature1: null,
+        temperature2: null,
+        temperature3: null,
+        temperatureAfterHeating: null,
+        baume: null,
+        acidity: null,
+        alcohol: null,
+        memo: '',
+        isAnalysisDay: false
+      });
   }
 
   return records;
