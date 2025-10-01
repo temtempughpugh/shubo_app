@@ -1,5 +1,3 @@
-import React from 'react';
-
 type Page = 'dashboard' | 'tank-assignment' | 'tank-settings' | 'analysis-schedule';
 
 interface NavigationProps {

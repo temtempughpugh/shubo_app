@@ -462,7 +462,7 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
               </thead>
               <tbody>
                 {enabledTanks.map((tank, index) => {
-                  const assignmentEntry = Array.from(assignments.entries()).find(([num, assignment]) => assignment.tankId === tank.tankId);
+                  const assignmentEntry = Array.from(assignments.entries()).find(([_, assignment]) => assignment.tankId === tank.tankId);
                   const configuredEntry = dataContext.configuredShuboData.find(config => config.selectedTankId === tank.tankId);
                   
                   const isUsed = assignmentEntry || configuredEntry;

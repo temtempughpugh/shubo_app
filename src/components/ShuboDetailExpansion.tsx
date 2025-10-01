@@ -209,7 +209,7 @@ export default function ShuboDetailExpansion({
                 ))}
 
                 {/* 縦罫線（日単位） */}
-                {columnWidths.map((width, index) => {
+                {columnWidths.map((_, index) => {
                   const xPos = graphPadding.left + columnWidths.slice(0, index + 1).reduce((sum, w) => sum + w, 0);
                   return (
                     <line
