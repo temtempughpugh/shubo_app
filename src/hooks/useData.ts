@@ -215,6 +215,7 @@ export function useData() {
   return {
     // Raw Data
     shuboRawData,
+    setShuboRawData,
     recipeRawData,
     tankConversionMap,
     

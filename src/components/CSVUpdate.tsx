@@ -6,6 +6,7 @@ import { STORAGE_KEYS } from '../utils/types';
 interface CSVUpdateProps {
   dataContext: {
     shuboRawData: ShuboRawData[];
+    setShuboRawData: (data: ShuboRawData[]) => void;
     configuredShuboData: any[];
     reloadData: () => Promise<void>;
   };
@@ -18,6 +19,7 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
   const [preview, setPreview] = useState<{
     toUpdate: number[];
     toKeep: number[];
+    notImported: number[];
   } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -72,9 +74,16 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
         }
       });
 
+      const newBeforeUpdateDate = newShuboData.filter(shubo => {
+        const startDate = convertExcelDateToJs(parseFloat(shubo.shuboStartDate));
+        startDate.setHours(0, 0, 0, 0);
+        return startDate < updateDateObj;
+      });
+
       setPreview({
         toUpdate: toUpdate.sort((a, b) => a - b),
-        toKeep: toKeep.sort((a, b) => a - b)
+        toKeep: toKeep.sort((a, b) => a - b),
+        notImported: newBeforeUpdateDate.map(s => s.shuboNumber).sort((a, b) => a - b)
       });
 
     } catch (error) {
@@ -100,7 +109,26 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
       const csvData = lines.map(line => line.split(','));
       const newShuboData = parseShuboCSV(csvData);
 
-      localStorage.setItem(STORAGE_KEYS.SHUBO_RAW_DATA, JSON.stringify(newShuboData));
+      const updateDateObj = new Date(updateDate);
+      updateDateObj.setHours(0, 0, 0, 0);
+
+      const currentShuboData = dataContext.shuboRawData;
+      const keptShuboData = currentShuboData.filter(shubo => {
+        const startDate = convertExcelDateToJs(parseFloat(shubo.shuboStartDate));
+        startDate.setHours(0, 0, 0, 0);
+        return startDate < updateDateObj;
+      });
+
+      const updatedShuboData = newShuboData.filter(shubo => {
+        const startDate = convertExcelDateToJs(parseFloat(shubo.shuboStartDate));
+        startDate.setHours(0, 0, 0, 0);
+        return startDate >= updateDateObj;
+      });
+
+      const mergedShuboData = [...keptShuboData, ...updatedShuboData].sort((a, b) => a.shuboNumber - b.shuboNumber);
+
+      localStorage.setItem(STORAGE_KEYS.SHUBO_RAW_DATA, JSON.stringify(mergedShuboData));
+      dataContext.setShuboRawData(mergedShuboData);
 
       const currentConfigured = dataContext.configuredShuboData;
       const filtered = currentConfigured.filter(c => !preview.toUpdate.includes(c.shuboNumber));
@@ -132,6 +160,71 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
       alert('更新に失敗しました');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleExport = () => {
+    try {
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        version: '1.0',
+        data: {
+          shubo_raw_data: localStorage.getItem(STORAGE_KEYS.SHUBO_RAW_DATA),
+          shubo_configured_data: localStorage.getItem(STORAGE_KEYS.CONFIGURED_SHUBO_DATA),
+          shubo_daily_records: localStorage.getItem(STORAGE_KEYS.DAILY_RECORDS_DATA),
+          shubo_tank_config: localStorage.getItem(STORAGE_KEYS.TANK_CONFIG_DATA),
+          shubo_analysis_settings: localStorage.getItem(STORAGE_KEYS.ANALYSIS_SETTINGS),
+          shubo_csv_update_history: localStorage.getItem(STORAGE_KEYS.CSV_UPDATE_HISTORY),
+          shubo_daily_environment: localStorage.getItem(STORAGE_KEYS.DAILY_ENVIRONMENT),
+        }
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+      a.href = url;
+      a.download = `shubo_backup_${dateStr}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      alert('バックアップファイルをダウンロードしました');
+    } catch (error) {
+      console.error('エクスポートエラー:', error);
+      alert('エクスポートに失敗しました');
+    }
+  };
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!confirm('現在のデータは全て上書きされます。続行しますか？')) {
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      const importData = JSON.parse(text);
+
+      if (!importData.data) {
+        throw new Error('無効なバックアップファイルです');
+      }
+
+      Object.entries(importData.data).forEach(([key, value]) => {
+        if (value) {
+          localStorage.setItem(key, value as string);
+        }
+      });
+
+      alert('データを復元しました。ページをリロードします。');
+      window.location.reload();
+    } catch (error) {
+      console.error('インポートエラー:', error);
+      alert('インポートに失敗しました。ファイルが正しいか確認してください。');
+    } finally {
+      e.target.value = '';
     }
   };
 
@@ -200,6 +293,13 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
                   </p>
                 </div>
 
+                <div className="border border-slate-200 bg-slate-50 rounded-xl p-4">
+                  <h3 className="font-bold text-slate-800 mb-2">取り込まない（更新日より前の仕込み）（{preview.notImported.length}件）</h3>
+                  <p className="text-sm text-slate-600">
+                    {preview.notImported.length > 0 ? preview.notImported.join('号、') + '号' : 'なし'}
+                  </p>
+                </div>
+
                 <button
                   onClick={handleUpdate}
                   disabled={isProcessing}
@@ -242,6 +342,57 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
             </div>
           </div>
         )}
+
+        <div className="bg-white rounded-2xl shadow-xl border border-slate-200/50 overflow-hidden">
+          <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4">
+            <h2 className="text-2xl font-bold text-white">💾 バックアップ・復元</h2>
+          </div>
+
+          <div className="p-8 space-y-6">
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="border border-purple-200 bg-purple-50 rounded-xl p-4">
+                <h3 className="font-bold text-purple-800 mb-3">データエクスポート</h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  全ての作業データをバックアップファイルとして保存します
+                </p>
+                <button
+                  onClick={handleExport}
+                  className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold transition-all"
+                >
+                  📥 エクスポート
+                </button>
+              </div>
+
+              <div className="border border-blue-200 bg-blue-50 rounded-xl p-4">
+                <h3 className="font-bold text-blue-800 mb-3">データインポート</h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  バックアップファイルから全データを復元します
+                </p>
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleImportFile}
+                  className="hidden"
+                  id="import-file"
+                />
+                <label
+                  htmlFor="import-file"
+                  className="block w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-center cursor-pointer transition-all"
+                >
+                  📤 インポート
+                </label>
+              </div>
+            </div>
+
+            <div className="border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded">
+              <p className="text-sm text-yellow-800">
+                <strong>⚠️ 注意:</strong> インポートすると現在のデータは全て上書きされます。事前にエクスポートでバックアップを取ることを推奨します。
+              </p>
+            </div>
+
+          </div>
+        </div>
 
       </div>
     </div>

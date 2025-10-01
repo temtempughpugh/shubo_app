@@ -106,14 +106,22 @@ export default function ShuboDetailExpansion({
       <td colSpan={8} className="bg-slate-50 p-4">
         <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
           
-          <div className="grid grid-cols-4 gap-4 p-4 border-b border-slate-200 bg-slate-50">
+          <div className="grid grid-cols-5 gap-4 p-4 border-b border-slate-200 bg-slate-50">
             <div className="space-y-1">
-              <h5 className="font-bold text-xs text-slate-700 mb-2 border-b border-slate-300 pb-1">基本情報</h5>
+              <h5 className="font-bold text-xs text-slate-700 mb-2 border-b border-slate-300 pb-1">基本情報①</h5>
               <div className="text-xs"><span className="text-slate-600">酒母:</span> <span className="font-semibold">{shubo.displayName}</span></div>
               <div className="text-xs"><span className="text-slate-600">タンク:</span> <span className="font-semibold">{shubo.selectedTankId}</span></div>
               <div className="text-xs"><span className="text-slate-600">酛種類:</span> <span className="font-semibold">{shubo.shuboType}</span></div>
               <div className="text-xs"><span className="text-slate-600">仕込規模:</span> <span className="font-semibold">{shubo.originalData[0].brewingScale}kg</span></div>
               <div className="text-xs"><span className="text-slate-600">酵母:</span> <span className="font-semibold">{shubo.originalData[0].yeast}</span></div>
+            </div>
+
+            <div className="space-y-1">
+              <h5 className="font-bold text-xs text-slate-700 mb-2 border-b border-slate-300 pb-1">基本情報②</h5>
+              <div className="text-xs"><span className="text-slate-600">仕込区分:</span> <span className="font-semibold">{shubo.originalData[0].brewingCategory}</span></div>
+              <div className="text-xs"><span className="text-slate-600">麹米:</span> <span className="font-semibold">{shubo.originalData[0].kojiRiceVariety}</span></div>
+              <div className="text-xs"><span className="text-slate-600">掛米:</span> <span className="font-semibold">{shubo.originalData[0].kakeRiceVariety}</span></div>
+              <div className="text-xs"><span className="text-slate-600">備考:</span> <span className="font-semibold">{shubo.originalData[0].memo}</span></div>
             </div>
 
             <div className="space-y-1">
@@ -504,6 +512,136 @@ export default function ShuboDetailExpansion({
                       />
                     </td>
                   ))}
+                </tr>
+                
+                <tr className="hover:bg-slate-50">
+                  <td className="border border-slate-300 px-2 py-2 font-bold sticky left-0 bg-white z-10">ボーメ予測</td>
+                  {(() => {
+                    const savedSettings = localStorage.getItem('shubo_analysis_settings');
+                    const settings = savedSettings ? JSON.parse(savedSettings) : null;
+                    const predictionSettings = settings?.baumePrediction;
+                    
+                    const recordsWithBaume = localRecords.filter(r => r.baume !== null && r.dayNumber >= 3);
+                    const lastTwoRecords = recordsWithBaume.slice(-2);
+                    
+                    let dailyChange: number | null = null;
+                    let lastRecordDay: number | null = null;
+                    let lastBaumeValue: number | null = null;
+                    
+                    if (lastTwoRecords.length === 2) {
+                      const [prev, last] = lastTwoRecords;
+                      const dayDiff = last.dayNumber - prev.dayNumber;
+                      const baumeDiff = last.baume! - prev.baume!;
+                      dailyChange = baumeDiff / dayDiff;
+                      lastRecordDay = last.dayNumber;
+                      lastBaumeValue = last.baume!;
+                    }
+                    
+                    const isDual = shubo.primaryNumber !== shubo.secondaryNumber;
+                    const maxDay = shubo.maxShuboDays;
+                    
+                    return localRecords.map((record) => {
+                      let displayValue: string = '';
+                      let textColor: string = '';
+                      
+                      if (record.baume !== null) {
+                        displayValue = record.baume.toFixed(1);
+                        textColor = 'text-blue-600 font-semibold';
+                      } else if (dailyChange !== null && lastRecordDay !== null && lastBaumeValue !== null && record.dayNumber > lastRecordDay) {
+                        const daysSinceLastRecord = record.dayNumber - lastRecordDay;
+                        const predictedValue = lastBaumeValue + (dailyChange * daysSinceLastRecord);
+                        displayValue = predictedValue.toFixed(1);
+                        
+                        const daysBeforeDischarge = maxDay - record.dayNumber;
+                        
+                        if (predictionSettings) {
+                          if (daysBeforeDischarge === 0) {
+                            textColor = 'text-red-600 font-semibold';
+                          } else if (isDual) {
+                            if (daysBeforeDischarge === 1 && predictionSettings.dual.daysBeforeDischarge1 === null) {
+                              textColor = 'text-red-600 font-semibold';
+                            } else if (daysBeforeDischarge === 2 && predictionSettings.dual.daysBeforeDischarge2 === null) {
+                              textColor = 'text-red-600 font-semibold';
+                            } else if (daysBeforeDischarge === 3 && predictionSettings.dual.daysBeforeDischarge3 === null) {
+                              textColor = 'text-red-600 font-semibold';
+                            } else if (daysBeforeDischarge === 4) {
+                              if (predictedValue <= predictionSettings.dual.daysBeforeDischarge4Low) {
+                                textColor = 'text-red-600 font-semibold';
+                              } else if (predictedValue <= predictionSettings.dual.daysBeforeDischarge4High) {
+                                textColor = 'text-orange-600 font-semibold';
+                              } else {
+                                textColor = 'text-green-600 font-semibold';
+                              }
+                            } else if (daysBeforeDischarge === 5) {
+                              if (predictedValue <= predictionSettings.dual.daysBeforeDischarge5Low) {
+                                textColor = 'text-red-600 font-semibold';
+                              } else if (predictedValue <= predictionSettings.dual.daysBeforeDischarge5High) {
+                                textColor = 'text-orange-600 font-semibold';
+                              } else {
+                                textColor = 'text-green-600 font-semibold';
+                              }
+                            } else if (daysBeforeDischarge === 6) {
+                              if (predictedValue <= predictionSettings.dual.daysBeforeDischarge6Low) {
+                                textColor = 'text-red-600 font-semibold';
+                              } else if (predictedValue <= predictionSettings.dual.daysBeforeDischarge6High) {
+                                textColor = 'text-orange-600 font-semibold';
+                              } else {
+                                textColor = 'text-green-600 font-semibold';
+                              }
+                            } else {
+                              textColor = 'text-green-600 font-semibold';
+                            }
+                          } else {
+                            if (daysBeforeDischarge === 1 && predictionSettings.single.daysBeforeDischarge1 === null) {
+                              textColor = 'text-red-600 font-semibold';
+                            } else if (daysBeforeDischarge === 2) {
+                              if (predictedValue <= predictionSettings.single.daysBeforeDischarge2Low) {
+                                textColor = 'text-red-600 font-semibold';
+                              } else if (predictedValue <= predictionSettings.single.daysBeforeDischarge2High) {
+                                textColor = 'text-orange-600 font-semibold';
+                              } else {
+                                textColor = 'text-green-600 font-semibold';
+                              }
+                            } else if (daysBeforeDischarge === 3) {
+                              if (predictedValue <= predictionSettings.single.daysBeforeDischarge3Low) {
+                                textColor = 'text-red-600 font-semibold';
+                              } else if (predictedValue <= predictionSettings.single.daysBeforeDischarge3High) {
+                                textColor = 'text-orange-600 font-semibold';
+                              } else {
+                                textColor = 'text-green-600 font-semibold';
+                              }
+                            } else if (daysBeforeDischarge === 4) {
+                              if (predictedValue <= predictionSettings.single.daysBeforeDischarge4Low) {
+                                textColor = 'text-red-600 font-semibold';
+                              } else if (predictedValue <= predictionSettings.single.daysBeforeDischarge4High) {
+                                textColor = 'text-orange-600 font-semibold';
+                              } else {
+                                textColor = 'text-green-600 font-semibold';
+                              }
+                            } else if (daysBeforeDischarge === 5) {
+                              if (predictedValue <= predictionSettings.single.daysBeforeDischarge5Low) {
+                                textColor = 'text-red-600 font-semibold';
+                              } else if (predictedValue <= predictionSettings.single.daysBeforeDischarge5High) {
+                                textColor = 'text-orange-600 font-semibold';
+                              } else {
+                                textColor = 'text-green-600 font-semibold';
+                              }
+                            } else {
+                              textColor = 'text-green-600 font-semibold';
+                            }
+                          }
+                        } else {
+                          textColor = 'text-green-600 font-semibold';
+                        }
+                      }
+                      
+                      return (
+                        <td key={record.dayNumber} className="border border-slate-300 px-2 py-2 text-center">
+                          <span className={textColor}>{displayValue}</span>
+                        </td>
+                      );
+                    });
+                  })()}
                 </tr>
                 
                 <tr className="hover:bg-slate-50">

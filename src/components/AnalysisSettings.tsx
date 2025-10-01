@@ -110,6 +110,300 @@ export default function AnalysisSettings({ onClose }: AnalysisSettingsProps) {
               </button>
             </div>
 
+            {/* ボーメ予測警告設定 */}
+            <div className="border border-slate-200 rounded-xl p-6">
+              <h3 className="text-lg font-bold text-slate-800 mb-4">ボーメ予測警告設定</h3>
+              
+              {/* 1個もと設定 */}
+              <div className="mb-6">
+                <h4 className="font-bold text-slate-700 mb-3">1個もと</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-4">
+                    <label className="w-32 text-sm text-slate-600">卸日1日前:</label>
+                    <span className="text-sm text-red-600 font-semibold">常に赤表示</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="w-32 text-sm text-slate-600">卸日2日前:</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={settings.baumePrediction.single.daysBeforeDischarge2High}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        baumePrediction: {
+                          ...prev.baumePrediction,
+                          single: {
+                            ...prev.baumePrediction.single,
+                            daysBeforeDischarge2High: parseFloat(e.target.value)
+                          }
+                        }
+                      }))}
+                      className="px-3 py-1 border rounded text-sm w-20"
+                    />
+                    <span className="text-sm text-slate-600">以下でオレンジ、</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={settings.baumePrediction.single.daysBeforeDischarge2Low}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        baumePrediction: {
+                          ...prev.baumePrediction,
+                          single: {
+                            ...prev.baumePrediction.single,
+                            daysBeforeDischarge2Low: parseFloat(e.target.value)
+                          }
+                        }
+                      }))}
+                      className="px-3 py-1 border rounded text-sm w-20"
+                    />
+                    <span className="text-sm text-slate-600">以下で赤</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="w-32 text-sm text-slate-600">卸日3日前:</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={settings.baumePrediction.single.daysBeforeDischarge3High}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        baumePrediction: {
+                          ...prev.baumePrediction,
+                          single: {
+                            ...prev.baumePrediction.single,
+                            daysBeforeDischarge3High: parseFloat(e.target.value)
+                          }
+                        }
+                      }))}
+                      className="px-3 py-1 border rounded text-sm w-20"
+                    />
+                    <span className="text-sm text-slate-600">以下でオレンジ、</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={settings.baumePrediction.single.daysBeforeDischarge3Low}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        baumePrediction: {
+                          ...prev.baumePrediction,
+                          single: {
+                            ...prev.baumePrediction.single,
+                            daysBeforeDischarge3Low: parseFloat(e.target.value)
+                          }
+                        }
+                      }))}
+                      className="px-3 py-1 border rounded text-sm w-20"
+                    />
+                    <span className="text-sm text-slate-600">以下で赤</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="w-32 text-sm text-slate-600">卸日4日前:</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={settings.baumePrediction.single.daysBeforeDischarge4High}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        baumePrediction: {
+                          ...prev.baumePrediction,
+                          single: {
+                            ...prev.baumePrediction.single,
+                            daysBeforeDischarge4High: parseFloat(e.target.value)
+                          }
+                        }
+                      }))}
+                      className="px-3 py-1 border rounded text-sm w-20"
+                    />
+                    <span className="text-sm text-slate-600">以下でオレンジ、</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={settings.baumePrediction.single.daysBeforeDischarge4Low}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        baumePrediction: {
+                          ...prev.baumePrediction,
+                          single: {
+                            ...prev.baumePrediction.single,
+                            daysBeforeDischarge4Low: parseFloat(e.target.value)
+                          }
+                        }
+                      }))}
+                      className="px-3 py-1 border rounded text-sm w-20"
+                    />
+                    <span className="text-sm text-slate-600">以下で赤</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="w-32 text-sm text-slate-600">卸日5日前:</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={settings.baumePrediction.single.daysBeforeDischarge5High}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        baumePrediction: {
+                          ...prev.baumePrediction,
+                          single: {
+                            ...prev.baumePrediction.single,
+                            daysBeforeDischarge5High: parseFloat(e.target.value)
+                          }
+                        }
+                      }))}
+                      className="px-3 py-1 border rounded text-sm w-20"
+                    />
+                    <span className="text-sm text-slate-600">以下でオレンジ、</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={settings.baumePrediction.single.daysBeforeDischarge5Low}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        baumePrediction: {
+                          ...prev.baumePrediction,
+                          single: {
+                            ...prev.baumePrediction.single,
+                            daysBeforeDischarge5Low: parseFloat(e.target.value)
+                          }
+                        }
+                      }))}
+                      className="px-3 py-1 border rounded text-sm w-20"
+                    />
+                    <span className="text-sm text-slate-600">以下で赤</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 2個もと設定 */}
+              <div>
+                <h4 className="font-bold text-slate-700 mb-3">2個もと</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-4">
+                    <label className="w-32 text-sm text-slate-600">卸日1日前:</label>
+                    <span className="text-sm text-red-600 font-semibold">常に赤表示</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="w-32 text-sm text-slate-600">卸日2日前:</label>
+                    <span className="text-sm text-red-600 font-semibold">常に赤表示</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="w-32 text-sm text-slate-600">卸日3日前:</label>
+                    <span className="text-sm text-red-600 font-semibold">常に赤表示</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="w-32 text-sm text-slate-600">卸日4日前:</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={settings.baumePrediction.dual.daysBeforeDischarge4High}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        baumePrediction: {
+                          ...prev.baumePrediction,
+                          dual: {
+                            ...prev.baumePrediction.dual,
+                            daysBeforeDischarge4High: parseFloat(e.target.value)
+                          }
+                        }
+                      }))}
+                      className="px-3 py-1 border rounded text-sm w-20"
+                    />
+                    <span className="text-sm text-slate-600">以下でオレンジ、</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={settings.baumePrediction.dual.daysBeforeDischarge4Low}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        baumePrediction: {
+                          ...prev.baumePrediction,
+                          dual: {
+                            ...prev.baumePrediction.dual,
+                            daysBeforeDischarge4Low: parseFloat(e.target.value)
+                          }
+                        }
+                      }))}
+                      className="px-3 py-1 border rounded text-sm w-20"
+                    />
+                    <span className="text-sm text-slate-600">以下で赤</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="w-32 text-sm text-slate-600">卸日5日前:</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={settings.baumePrediction.dual.daysBeforeDischarge5High}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        baumePrediction: {
+                          ...prev.baumePrediction,
+                          dual: {
+                            ...prev.baumePrediction.dual,
+                            daysBeforeDischarge5High: parseFloat(e.target.value)
+                          }
+                        }
+                      }))}
+                      className="px-3 py-1 border rounded text-sm w-20"
+                    />
+                    <span className="text-sm text-slate-600">以下でオレンジ、</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={settings.baumePrediction.dual.daysBeforeDischarge5Low}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        baumePrediction: {
+                          ...prev.baumePrediction,
+                          dual: {
+                            ...prev.baumePrediction.dual,
+                            daysBeforeDischarge5Low: parseFloat(e.target.value)
+                          }
+                        }
+                      }))}
+                      className="px-3 py-1 border rounded text-sm w-20"
+                    />
+                    <span className="text-sm text-slate-600">以下で赤</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <label className="w-32 text-sm text-slate-600">卸日6日前:</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={settings.baumePrediction.dual.daysBeforeDischarge6High}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        baumePrediction: {
+                          ...prev.baumePrediction,
+                          dual: {
+                            ...prev.baumePrediction.dual,
+                            daysBeforeDischarge6High: parseFloat(e.target.value)
+                          }
+                        }
+                      }))}
+                      className="px-3 py-1 border rounded text-sm w-20"
+                    />
+                    <span className="text-sm text-slate-600">以下でオレンジ、</span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={settings.baumePrediction.dual.daysBeforeDischarge6Low}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        baumePrediction: {
+                          ...prev.baumePrediction,
+                          dual: {
+                            ...prev.baumePrediction.dual,
+                            daysBeforeDischarge6Low: parseFloat(e.target.value)
+                          }
+                        }
+                      }))}
+                      className="px-3 py-1 border rounded text-sm w-20"
+                    />
+                    <span className="text-sm text-slate-600">以下で赤</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
 

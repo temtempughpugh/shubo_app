@@ -219,9 +219,61 @@ export const DEFAULT_ANALYSIS_DAYS = {
 export interface AnalysisSettings {
   speed: number[];      // 速醸のデフォルト分析日
   highTemp: number[];   // 高温糖化のデフォルト分析日
+  baumePrediction: BaumePredictionSettings;  // ボーメ予測警告設定
+}
+
+// ボーメ予測警告設定
+// ボーメ予測警告設定
+export interface BaumePredictionSettings {
+  single: {
+    daysBeforeDischarge1: number | null;  // 卸日1日前（常に赤、nullで無効）
+    daysBeforeDischarge2Low: number;   // 卸日2日前の赤閾値
+    daysBeforeDischarge2High: number;  // 卸日2日前のオレンジ閾値
+    daysBeforeDischarge3Low: number;   // 卸日3日前の赤閾値
+    daysBeforeDischarge3High: number;  // 卸日3日前のオレンジ閾値
+    daysBeforeDischarge4Low: number;   // 卸日4日前の赤閾値
+    daysBeforeDischarge4High: number;  // 卸日4日前のオレンジ閾値
+    daysBeforeDischarge5Low: number;   // 卸日5日前の赤閾値
+    daysBeforeDischarge5High: number;  // 卸日5日前のオレンジ閾値
+  };
+  dual: {
+    daysBeforeDischarge1: number | null;  // 卸日1日前（常に赤、nullで無効）
+    daysBeforeDischarge2: number | null;  // 卸日2日前（常に赤、nullで無効）
+    daysBeforeDischarge3: number | null;  // 卸日3日前（常に赤、nullで無効）
+    daysBeforeDischarge4Low: number;   // 卸日4日前の赤閾値
+    daysBeforeDischarge4High: number;  // 卸日4日前のオレンジ閾値
+    daysBeforeDischarge5Low: number;   // 卸日5日前の赤閾値
+    daysBeforeDischarge5High: number;  // 卸日5日前のオレンジ閾値
+    daysBeforeDischarge6Low: number;   // 卸日6日前の赤閾値
+    daysBeforeDischarge6High: number;  // 卸日6日前のオレンジ閾値
+  };
 }
 
 export const DEFAULT_ANALYSIS_SETTINGS: AnalysisSettings = {
   speed: [2, 6, 9],
-  highTemp: [2, 5, 7]
+  highTemp: [2, 5, 7],
+  baumePrediction: {
+    single: {
+      daysBeforeDischarge1: null,
+      daysBeforeDischarge2Low: 7.5,
+      daysBeforeDischarge2High: 8.0,
+      daysBeforeDischarge3Low: 8.0,
+      daysBeforeDischarge3High: 8.5,
+      daysBeforeDischarge4Low: 8.5,
+      daysBeforeDischarge4High: 9.0,
+      daysBeforeDischarge5Low: 9.0,
+      daysBeforeDischarge5High: 9.5
+    },
+    dual: {
+      daysBeforeDischarge1: null,
+      daysBeforeDischarge2: null,
+      daysBeforeDischarge3: null,
+      daysBeforeDischarge4Low: 7.5,
+      daysBeforeDischarge4High: 8.5,
+      daysBeforeDischarge5Low: 8.0,
+      daysBeforeDischarge5High: 9.0,
+      daysBeforeDischarge6Low: 8.5,
+      daysBeforeDischarge6High: 9.5
+    }
+  }
 };
