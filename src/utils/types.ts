@@ -113,7 +113,7 @@ export interface DailyRecordData {
 }
 
 // 日付ラベル選択肢
-export const DAY_LABEL_OPTIONS = ['-', '暖気', '分け'] as const;
+export const DAY_LABEL_OPTIONS = ['-', '暖気', '分け','卸し'] as const;
 export type DayLabelOption = typeof DAY_LABEL_OPTIONS[number];
 
 // タンク設定データ

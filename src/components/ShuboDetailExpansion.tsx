@@ -546,7 +546,89 @@ export default function ShuboDetailExpansion({
                       
                       if (record.baume !== null) {
                         displayValue = record.baume.toFixed(1);
-                        textColor = 'text-blue-600 font-semibold';
+                        const daysBeforeDischarge = maxDay - record.dayNumber;
+                        const baumeValue = record.baume;
+                        
+                        // 実測値でも警告判定を行う
+                        if (predictionSettings) {
+                          if (daysBeforeDischarge === 0) {
+                            textColor = 'text-red-600 font-semibold';
+                          } else if (isDual) {
+                            if (daysBeforeDischarge === 1 && predictionSettings.dual.daysBeforeDischarge1 === null) {
+                              textColor = 'text-red-600 font-semibold';
+                            } else if (daysBeforeDischarge === 2 && predictionSettings.dual.daysBeforeDischarge2 === null) {
+                              textColor = 'text-red-600 font-semibold';
+                            } else if (daysBeforeDischarge === 3 && predictionSettings.dual.daysBeforeDischarge3 === null) {
+                              textColor = 'text-red-600 font-semibold';
+                            } else if (daysBeforeDischarge === 4) {
+                              if (baumeValue <= predictionSettings.dual.daysBeforeDischarge4Low) {
+                                textColor = 'text-red-600 font-semibold';
+                              } else if (baumeValue <= predictionSettings.dual.daysBeforeDischarge4High) {
+                                textColor = 'text-orange-600 font-semibold';
+                              } else {
+                                textColor = 'text-blue-600 font-semibold';
+                              }
+                            } else if (daysBeforeDischarge === 5) {
+                              if (baumeValue <= predictionSettings.dual.daysBeforeDischarge5Low) {
+                                textColor = 'text-red-600 font-semibold';
+                              } else if (baumeValue <= predictionSettings.dual.daysBeforeDischarge5High) {
+                                textColor = 'text-orange-600 font-semibold';
+                              } else {
+                                textColor = 'text-blue-600 font-semibold';
+                              }
+                            } else if (daysBeforeDischarge === 6) {
+                              if (baumeValue <= predictionSettings.dual.daysBeforeDischarge6Low) {
+                                textColor = 'text-red-600 font-semibold';
+                              } else if (baumeValue <= predictionSettings.dual.daysBeforeDischarge6High) {
+                                textColor = 'text-orange-600 font-semibold';
+                              } else {
+                                textColor = 'text-blue-600 font-semibold';
+                              }
+                            } else {
+                              textColor = 'text-blue-600 font-semibold';
+                            }
+                          } else {
+                            if (daysBeforeDischarge === 1 && predictionSettings.single.daysBeforeDischarge1 === null) {
+                              textColor = 'text-red-600 font-semibold';
+                            } else if (daysBeforeDischarge === 2) {
+                              if (baumeValue <= predictionSettings.single.daysBeforeDischarge2Low) {
+                                textColor = 'text-red-600 font-semibold';
+                              } else if (baumeValue <= predictionSettings.single.daysBeforeDischarge2High) {
+                                textColor = 'text-orange-600 font-semibold';
+                              } else {
+                                textColor = 'text-blue-600 font-semibold';
+                              }
+                            } else if (daysBeforeDischarge === 3) {
+                              if (baumeValue <= predictionSettings.single.daysBeforeDischarge3Low) {
+                                textColor = 'text-red-600 font-semibold';
+                              } else if (baumeValue <= predictionSettings.single.daysBeforeDischarge3High) {
+                                textColor = 'text-orange-600 font-semibold';
+                              } else {
+                                textColor = 'text-blue-600 font-semibold';
+                              }
+                            } else if (daysBeforeDischarge === 4) {
+                              if (baumeValue <= predictionSettings.single.daysBeforeDischarge4Low) {
+                                textColor = 'text-red-600 font-semibold';
+                              } else if (baumeValue <= predictionSettings.single.daysBeforeDischarge4High) {
+                                textColor = 'text-orange-600 font-semibold';
+                              } else {
+                                textColor = 'text-blue-600 font-semibold';
+                              }
+                            } else if (daysBeforeDischarge === 5) {
+                              if (baumeValue <= predictionSettings.single.daysBeforeDischarge5Low) {
+                                textColor = 'text-red-600 font-semibold';
+                              } else if (baumeValue <= predictionSettings.single.daysBeforeDischarge5High) {
+                                textColor = 'text-orange-600 font-semibold';
+                              } else {
+                                textColor = 'text-blue-600 font-semibold';
+                              }
+                            } else {
+                              textColor = 'text-blue-600 font-semibold';
+                            }
+                          }
+                        } else {
+                          textColor = 'text-blue-600 font-semibold';
+                        }
                       } else if (dailyChange !== null && lastRecordDay !== null && lastBaumeValue !== null && record.dayNumber > lastRecordDay) {
                         const daysSinceLastRecord = record.dayNumber - lastRecordDay;
                         const predictedValue = lastBaumeValue + (dailyChange * daysSinceLastRecord);
