@@ -254,23 +254,22 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
   }
 
   function getRecipeData(shuboNumber: number) {
-    const shuboData = dataContext.shuboRawData.find(s => s.shuboNumber === shuboNumber);
-    const assignment = assignments.get(shuboNumber);
-    const shuboType = assignment?.shuboType || '速醸';
-    
-    if (!shuboData) return null;
-    
-    const recipe = findRecipe(dataContext.recipeRawData, shuboType, shuboData.brewingScale);
-    
-    if (!recipe) return null;
+  const shuboData = dataContext.shuboRawData.find(s => s.shuboNumber === shuboNumber);
+  const assignment = assignments.get(shuboNumber);
+  const shuboType = assignment?.shuboType || '速醸';
+  
+  if (!shuboData) return null;
+  
+  const recipe = findRecipe(dataContext.recipeRawData, shuboType, shuboData.brewingScale);
+  
+  if (!recipe) return null;
 
-    // 修正: そのまま返す（半分にしない）
-    return {
-      water: recipe.water,
-      lacticAcid: recipe.lacticAcid,
-      totalRice: recipe.recipeTotalRice
-    };
-  }
+  return {
+    measurement: recipe.measurement,  // water → measurement
+    lacticAcid: recipe.lacticAcid,
+    totalRice: recipe.recipeTotalRice
+  };
+}
 
   function getKensyaku(shuboNumber: number): string {
     const assignment = assignments.get(shuboNumber);
@@ -282,7 +281,7 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
       const tankConversions = dataContext.tankConversionMap.get(assignment.tankId);
       if (!tankConversions) return '-';
       
-      const targetCapacity = recipeData.water;
+      const targetCapacity = recipeData.measurement;
       let closestConversion = tankConversions[0];
       let minDiff = Math.abs(tankConversions[0].capacity - targetCapacity);
       
@@ -361,7 +360,7 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
                   <th className="px-3 py-3 text-left text-xs font-bold text-slate-700 border-r">モト総米</th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-slate-700 border-r w-28">酛種類</th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-slate-700 border-r w-48">タンク</th>
-                  <th className="px-3 py-3 text-left text-xs font-bold text-slate-700 border-r">汲水</th>
+                  <th className="px-3 py-3 text-left text-xs font-bold text-slate-700 border-r">留測</th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-slate-700 border-r">検尺</th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-slate-700 border-r">乳酸</th>
                   <th className="px-3 py-3 text-left text-xs font-bold text-slate-700 w-32">2個酛</th>
@@ -418,10 +417,10 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
                         </select>
                       </td>
                       <td className="px-3 py-2 border-r">
-                        <span className={recipeData ? 'text-blue-700 font-semibold' : 'text-slate-400'}>
-                          {recipeData ? `${recipeData.water}L` : '-'}
-                        </span>
-                      </td>
+  <span className={recipeData ? 'text-blue-700 font-semibold' : 'text-slate-400'}>
+    {recipeData ? `${recipeData.measurement}L` : '-'}
+  </span>
+</td>
                       <td className="px-3 py-2 border-r text-xs">{kensyaku}</td>
                       <td className="px-3 py-2 border-r">
                         <span className={recipeData ? 'text-green-700 font-semibold' : 'text-slate-400'}>

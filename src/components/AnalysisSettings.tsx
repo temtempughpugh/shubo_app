@@ -543,15 +543,24 @@ const handleSaveChanges = async () => {
   // handleCellEditをここで定義（この即時関数の中）
   const handleCellEdit = (field: keyof RecipeRawData, value: string) => {
   const numValue = value === '' ? null : parseFloat(value);
-  const updatedRecipes = recipeData.map(r =>
-    r.recipeBrewingScale === selectedScale && r.shuboType === selectedType
-      ? { ...r, [field]: numValue }
-      : r
-  );
-  setRecipeData(updatedRecipes);
-  setHasUnsavedChanges(true);  // 変更フラグを立てる
+  const updatedRecipes = recipeData.map(r => {
+    if (r.recipeBrewingScale === selectedScale && r.shuboType === selectedType) {
+      const updated = { ...r, [field]: numValue };
+      
+      // 汲み水または総米が変更された場合、measurementを再計算
+      if (field === 'water' || field === 'recipeTotalRice') {
+        const water = field === 'water' ? (numValue ?? 0) : (updated.water ?? 0);
+        const totalRice = field === 'recipeTotalRice' ? (numValue ?? 0) : (updated.recipeTotalRice ?? 0);
+        updated.measurement = water + totalRice;
+      }
+      
+      return updated;
+    }
+    return r;
+  });
   
-  // localStorageとdataContextへの保存は削除
+  setRecipeData(updatedRecipes);
+  setHasUnsavedChanges(true);
 };
 
 
