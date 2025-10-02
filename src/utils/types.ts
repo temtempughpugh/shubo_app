@@ -98,6 +98,14 @@ export interface MergedShuboData {
     measurement: number;
     lacticAcid: number;
   };
+  individualRecipeData: {
+    totalRice: number;
+    steamedRice: number;
+    kojiRice: number;
+    water: number;
+    measurement: number;
+    lacticAcid: number;
+  }[];
   tankData: {
     tankDisplayName: string;
     maxCapacity: number;

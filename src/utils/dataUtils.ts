@@ -395,25 +395,26 @@ export function createMergedShuboData(
       if (!secondary) continue;
       
       const mergedData: MergedShuboData = {
-        displayName: `${shubo.shuboNumber}・${secondary.shuboNumber}号`,
-        selectedTankId: shubo.selectedTankId,
-        shuboType: shubo.shuboType,
-        primaryNumber: shubo.shuboNumber,
-        secondaryNumber: secondary.shuboNumber,
-        shuboStartDate: shubo.shuboStartDate,
-        shuboEndDates: [shubo.shuboEndDate, secondary.shuboEndDate],
-        maxShuboDays: Math.max(shubo.shuboDays, secondary.shuboDays),
-        recipeData: {
-          totalRice: shubo.recipeData.totalRice + secondary.recipeData.totalRice,
-          steamedRice: shubo.recipeData.steamedRice + secondary.recipeData.steamedRice,
-          kojiRice: shubo.recipeData.kojiRice + secondary.recipeData.kojiRice,
-          water: shubo.recipeData.water + secondary.recipeData.water,
-          measurement: shubo.recipeData.measurement + secondary.recipeData.measurement,
-          lacticAcid: shubo.recipeData.lacticAcid + secondary.recipeData.lacticAcid
-        },
-        tankData: shubo.tankData,
-        originalData: [shubo.originalData, secondary.originalData]
-      };
+  displayName: `${shubo.shuboNumber}・${secondary.shuboNumber}号`,
+  selectedTankId: shubo.selectedTankId,
+  shuboType: shubo.shuboType,
+  primaryNumber: shubo.shuboNumber,
+  secondaryNumber: secondary.shuboNumber,
+  shuboStartDate: shubo.shuboStartDate,
+  shuboEndDates: [shubo.shuboEndDate, secondary.shuboEndDate],
+  maxShuboDays: Math.max(shubo.shuboDays, secondary.shuboDays),
+  recipeData: {
+    totalRice: shubo.recipeData.totalRice + secondary.recipeData.totalRice,
+    steamedRice: shubo.recipeData.steamedRice + secondary.recipeData.steamedRice,
+    kojiRice: shubo.recipeData.kojiRice + secondary.recipeData.kojiRice,
+    water: shubo.recipeData.water + secondary.recipeData.water,
+    measurement: shubo.recipeData.measurement + secondary.recipeData.measurement,
+    lacticAcid: shubo.recipeData.lacticAcid + secondary.recipeData.lacticAcid
+  },
+  individualRecipeData: [shubo.recipeData, secondary.recipeData],
+  tankData: shubo.tankData,
+  originalData: [shubo.originalData, secondary.originalData]
+};
       
       mergedList.push(mergedData);
       processed.add(shubo.shuboNumber);
@@ -421,18 +422,19 @@ export function createMergedShuboData(
       
     } else if (!dualInfo?.isDual) {
       const mergedData: MergedShuboData = {
-        displayName: `${shubo.shuboNumber}号`,
-        selectedTankId: shubo.selectedTankId,
-        shuboType: shubo.shuboType,
-        primaryNumber: shubo.shuboNumber,
-        secondaryNumber: shubo.shuboNumber,
-        shuboStartDate: shubo.shuboStartDate,
-        shuboEndDates: [shubo.shuboEndDate],
-        maxShuboDays: shubo.shuboDays,
-        recipeData: shubo.recipeData,
-        tankData: shubo.tankData,
-        originalData: [shubo.originalData]
-      };
+  displayName: `${shubo.shuboNumber}号`,
+  selectedTankId: shubo.selectedTankId,
+  shuboType: shubo.shuboType,
+  primaryNumber: shubo.shuboNumber,
+  secondaryNumber: shubo.shuboNumber,
+  shuboStartDate: shubo.shuboStartDate,
+  shuboEndDates: [shubo.shuboEndDate],
+  maxShuboDays: shubo.shuboDays,
+  recipeData: shubo.recipeData,
+  individualRecipeData: [shubo.recipeData],
+  tankData: shubo.tankData,
+  originalData: [shubo.originalData]
+};
       
       mergedList.push(mergedData);
       processed.add(shubo.shuboNumber);

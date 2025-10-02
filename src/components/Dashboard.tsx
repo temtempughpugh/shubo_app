@@ -622,20 +622,15 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                       {todayWorks.brewingSchedules.map(shubo => {
                         const isDual = shubo.primaryNumber !== shubo.secondaryNumber;
                         const expectedMeasurement = shubo.recipeData.measurement;
-                        const record = getDay1Record(shubo.primaryNumber);
-                        
-                        let measurementDisplay = `${expectedMeasurement}L`;
-                        
-                        if (isDual && dataContext.configuredShuboData && dataContext.configuredShuboData.length > 0) {
-                          const primary = dataContext.configuredShuboData.find(s => s.shuboNumber === shubo.primaryNumber);
-                          const secondary = dataContext.configuredShuboData.find(s => s.shuboNumber === shubo.secondaryNumber);
-                          
-                          if (primary && secondary) {
-                            const primaryMeasurement = primary.recipeData.measurement;
-                            const secondaryMeasurement = secondary.recipeData.measurement;
-                            measurementDisplay = `${expectedMeasurement}L (${primaryMeasurement}+${secondaryMeasurement})`;
-                          }
-                        }
+const record = getDay1Record(shubo.primaryNumber);
+
+let measurementDisplay = `${expectedMeasurement}L`;
+
+if (isDual) {
+  const primaryMeasurement = shubo.individualRecipeData[0].measurement;
+  const secondaryMeasurement = shubo.individualRecipeData[1].measurement;
+  measurementDisplay = `${expectedMeasurement}L (${primaryMeasurement}+${secondaryMeasurement})`;
+}
                         
                         const input = brewingInput[shubo.primaryNumber] || { afterBrewingKensyaku: null };
                         const capacity = input.afterBrewingKensyaku 

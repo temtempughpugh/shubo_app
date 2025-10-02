@@ -60,20 +60,14 @@ export default function ShuboDetailExpansion({
 
   const isDual = shubo.primaryNumber !== shubo.secondaryNumber;
   
-const formatRecipeValue = (total: number, unit: string) => {
-  if (!isDual) return `${total}${unit}`;
+const formatRecipeValue = (field: 'totalRice' | 'steamedRice' | 'kojiRice' | 'water' | 'measurement' | 'lacticAcid', unit: string) => {
+  if (!isDual) return `${shubo.recipeData[field]}${unit}`;
   
-  // originalDataから個別の値を取得
-  const primary = shubo.originalData[0].shuboTotalRice;
-  const secondary = shubo.originalData[1]?.shuboTotalRice;
+  const value1 = shubo.individualRecipeData[0][field];
+  const value2 = shubo.individualRecipeData[1][field];
+  const total = value1 + value2;
   
-  // shuboTotalRiceしか使えないので、比率で計算
-  // recipeDataは既に合計されているので、originalDataの比率で分割
-  const primaryRatio = primary / (primary + (secondary || 0));
-  const individual1 = Math.round(total * primaryRatio);
-  const individual2 = total - individual1;
-  
-  return `${total}(${individual1}+${individual2})${unit}`;
+  return `${total}(${value1}+${value2})${unit}`;
 };
 
   const brewingKensyaku = brewingInput?.afterBrewingKensyaku;
@@ -136,11 +130,11 @@ const formatRecipeValue = (total: number, unit: string) => {
 
             <div className="space-y-1">
               <h5 className="font-bold text-xs text-slate-700 mb-2 border-b border-slate-300 pb-1">配合情報</h5>
-              <div className="text-xs"><span className="text-slate-600">総米:</span> <span className="font-semibold">{formatRecipeValue(shubo.recipeData.totalRice, 'kg')}</span></div>
-<div className="text-xs"><span className="text-slate-600">蒸米:</span> <span className="font-semibold">{formatRecipeValue(shubo.recipeData.steamedRice, 'kg')}</span></div>
-<div className="text-xs"><span className="text-slate-600">麹米:</span> <span className="font-semibold">{formatRecipeValue(shubo.recipeData.kojiRice, 'kg')}</span></div>
-<div className="text-xs"><span className="text-slate-600">汲み水:</span> <span className="font-semibold">{formatRecipeValue(shubo.recipeData.water, 'L')}</span></div>
-<div className="text-xs"><span className="text-slate-600">乳酸:</span> <span className="font-semibold">{formatRecipeValue(shubo.recipeData.lacticAcid, 'ml')}</span></div>
+              <div className="text-xs"><span className="text-slate-600">総米:</span> <span className="font-semibold">{formatRecipeValue('totalRice', 'kg')}</span></div>
+<div className="text-xs"><span className="text-slate-600">蒸米:</span> <span className="font-semibold">{formatRecipeValue('steamedRice', 'kg')}</span></div>
+<div className="text-xs"><span className="text-slate-600">麹米:</span> <span className="font-semibold">{formatRecipeValue('kojiRice', 'kg')}</span></div>
+<div className="text-xs"><span className="text-slate-600">汲み水:</span> <span className="font-semibold">{formatRecipeValue('water', 'L')}</span></div>
+<div className="text-xs"><span className="text-slate-600">乳酸:</span> <span className="font-semibold">{formatRecipeValue('lacticAcid', 'ml')}</span></div>
             </div>
 
             <div className="space-y-1">

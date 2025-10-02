@@ -514,18 +514,22 @@ function generateShuboListHTML(
     
     const isDual = shubo.primaryNumber !== shubo.secondaryNumber;
     
-    const formatRecipeValue = (total: number, unit: string) => {
-      if (!isDual) return `${total}${unit}`;
-      
-      const primary = shubo.originalData[0].shuboTotalRice;
-      const secondary = shubo.originalData[1]?.shuboTotalRice || 0;
-      
-      const primaryRatio = primary / (primary + secondary);
-      const individual1 = Math.round(total * primaryRatio);
-      const individual2 = total - individual1;
-      
-      return `${total}(${individual1}+${individual2})${unit}`;
-    };
+   const formatRecipeValue = (field: keyof typeof shubo.recipeData, unit: string) => {
+  if (!isDual) return `${shubo.recipeData[field]}${unit}`;
+  
+  const value1 = shubo.individualRecipeData[0][field];
+  const value2 = shubo.individualRecipeData[1][field];
+  const total = value1 + value2;
+  
+  return `${total}(${value1}+${value2})${unit}`;
+};
+
+// ここに追加
+const totalRiceStr = formatRecipeValue('totalRice', 'kg');
+const steamedRiceStr = formatRecipeValue('steamedRice', 'kg');
+const kojiRiceStr = formatRecipeValue('kojiRice', 'kg');
+const waterStr = formatRecipeValue('water', 'L');
+const lacticAcidStr = formatRecipeValue('lacticAcid', 'ml');
 
     // 仕込み情報
     const brewingInput = brewingData[shubo.primaryNumber];
@@ -653,11 +657,15 @@ function generateShuboListHTML(
     }
 
     // 気温データ取得
-    const getAirTemp = (record: DailyRecordData) => {
-      const dateKey = dateToKey(record.recordDate);
-      const env = envData[dateKey];
-      return env?.temperature || '-';
-    };
+    // 気温データ取得
+const getAirTemp = (record: DailyRecordData) => {
+  const date = record.recordDate instanceof Date 
+    ? record.recordDate 
+    : new Date(record.recordDate);
+  const dateKey = dateToKey(date);
+  const env = envData[dateKey];
+  return env?.temperature || '-';
+};
     
     return `
       <div class="page">
@@ -680,13 +688,13 @@ function generateShuboListHTML(
           </div>
 
           <div class="info-block">
-            <h3>配合情報</h3>
-            <div class="info-item"><span>総米:</span> ${formatRecipeValue(shubo.recipeData.totalRice, 'kg')}</div>
-            <div class="info-item"><span>蒸米:</span> ${formatRecipeValue(shubo.recipeData.steamedRice, 'kg')}</div>
-            <div class="info-item"><span>麹米:</span> ${formatRecipeValue(shubo.recipeData.kojiRice, 'kg')}</div>
-            <div class="info-item"><span>汲み水:</span> ${formatRecipeValue(shubo.recipeData.water, 'L')}</div>
-            <div class="info-item"><span>乳酸:</span> ${formatRecipeValue(shubo.recipeData.lacticAcid, 'ml')}</div>
-          </div>
+  <h3>配合情報</h3>
+  <div class="info-item"><span>総米:</span> ${totalRiceStr}</div>
+  <div class="info-item"><span>蒸米:</span> ${steamedRiceStr}</div>
+  <div class="info-item"><span>麹米:</span> ${kojiRiceStr}</div>
+  <div class="info-item"><span>汲み水:</span> ${waterStr}</div>
+  <div class="info-item"><span>乳酸:</span> ${lacticAcidStr}</div>
+</div>
 
           <div class="info-block">
             <h3>仕込み情報</h3>
