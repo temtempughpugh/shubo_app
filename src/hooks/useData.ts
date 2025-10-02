@@ -79,35 +79,39 @@ export function useData() {
 ]);
 
   // recipeRawDataが変更されたら、configuredShuboDataのrecipeDataを更新
-  useEffect(() => {
-    if (recipeRawData.length > 0 && configuredShuboData.length > 0) {
-      const updatedConfigured = configuredShuboData.map(shubo => {
-        const recipe = recipeRawData.find(r => 
-          r.shuboType === shubo.shuboType && 
-          r.recipeBrewingScale === shubo.originalData.brewingScale
-        );
-        if (recipe) {
-          return {
-            ...shubo,
-            recipeData: {
-              totalRice: recipe.recipeTotalRice,
-              steamedRice: recipe.steamedRice,
-              kojiRice: recipe.kojiRice,
-              water: recipe.water,
-              measurement: recipe.measurement,
-              lacticAcid: recipe.lacticAcid
-            }
-          };
-        }
-        return shubo;
-      });
-      
-      // 変更があった場合のみ更新
-      if (JSON.stringify(updatedConfigured) !== JSON.stringify(configuredShuboData)) {
-        setConfiguredShuboData(updatedConfigured);
+useEffect(() => {
+  if (recipeRawData.length > 0 && configuredShuboData.length > 0) {
+    const updatedConfigured = configuredShuboData.map(shubo => {
+      const recipe = recipeRawData.find(r => 
+        r.shuboType === shubo.shuboType && 
+        r.recipeBrewingScale === shubo.originalData.brewingScale
+      );
+      if (recipe) {
+        return {
+          ...shubo,
+          recipeData: {
+            totalRice: recipe.recipeTotalRice,
+            steamedRice: recipe.steamedRice,
+            kojiRice: recipe.kojiRice,
+            water: recipe.water,
+            measurement: recipe.measurement,
+            lacticAcid: recipe.lacticAcid
+          }
+        };
       }
+      return shubo;
+    });
+    
+    // 変更があった場合のみ更新
+    if (JSON.stringify(updatedConfigured) !== JSON.stringify(configuredShuboData)) {
+      setConfiguredShuboData(updatedConfigured);
+      
+      // ← ここに追加: 更新直後にmergedShuboDataも再生成
+      const merged = createMergedShuboData(updatedConfigured);
+      setMergedShuboData(merged);
     }
-  }, [recipeRawData.length, JSON.stringify(recipeRawData)]);  // ← ここを修正
+  }
+}, [recipeRawData.length, JSON.stringify(recipeRawData)]);
 
   async function loadAllCSVData() {
   try {
@@ -260,6 +264,7 @@ export function useData() {
   configuredShuboData,
   setConfiguredShuboData,  // ← これを追加
   mergedShuboData,
+  setMergedShuboData,  // ← これを追加
   tankConfigData,
   dailyRecordsData,
   

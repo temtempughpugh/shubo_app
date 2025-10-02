@@ -60,15 +60,16 @@ useEffect(() => {
   loadRecipeData();
 }, []);
 
-const handleSaveChanges = () => {
+const handleSaveChanges = async () => {
+  // 1. localStorageを更新
   localStorage.setItem('shubo_recipe_data', JSON.stringify(recipeData));
   
-  // dataContextのrecipeRawDataを更新
+  // 2. recipeRawDataを更新
   if (dataContext?.setRecipeRawData) {
     dataContext.setRecipeRawData(recipeData);
   }
   
-  // configuredShuboDataも明示的に更新
+  // 3. configuredShuboDataを更新
   if (dataContext?.configuredShuboData && dataContext?.setConfiguredShuboData) {
     const updatedConfigured = dataContext.configuredShuboData.map((shubo: any) => {
       const recipe = recipeData.find(r => 
@@ -83,7 +84,7 @@ const handleSaveChanges = () => {
             steamedRice: recipe.steamedRice,
             kojiRice: recipe.kojiRice,
             water: recipe.water,
-            measurement: recipe.measurement,
+            measurement: recipe.water + recipe.recipeTotalRice,
             lacticAcid: recipe.lacticAcid
           }
         };
@@ -92,6 +93,13 @@ const handleSaveChanges = () => {
     });
     
     dataContext.setConfiguredShuboData(updatedConfigured);
+    
+    // 4. mergedShuboDataも即座に更新（これを追加）
+    const { createMergedShuboData } = await import('../utils/dataUtils');
+    const merged = createMergedShuboData(updatedConfigured);
+    if (dataContext?.setMergedShuboData) {
+      dataContext.setMergedShuboData(merged);
+    }
   }
   
   setHasUnsavedChanges(false);
