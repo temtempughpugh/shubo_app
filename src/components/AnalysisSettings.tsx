@@ -4,9 +4,10 @@ import { loadCSV, parseRecipeCSV } from '../utils/dataUtils';
 
 interface AnalysisSettingsProps {
   onClose: () => void;
+  dataContext: any;  // 追加
 }
 
-export default function AnalysisSettings({ onClose }: AnalysisSettingsProps) {
+export default function AnalysisSettings({ onClose, dataContext }: AnalysisSettingsProps) {
   const [settings, setSettings] = useState<AnalysisSettings>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.ANALYSIS_SETTINGS);
     return saved ? JSON.parse(saved) : DEFAULT_ANALYSIS_SETTINGS;
@@ -484,27 +485,33 @@ useEffect(() => {
               </div>
 
               {/* 配合表 */}
-              {(() => {
-                const recipe = recipeData.find(r => 
-                  r.recipeBrewingScale === selectedScale && r.shuboType === selectedType
-                );
-                
-                if (!recipe) {
-                  return <p className="text-slate-500 text-center py-4">データがありません</p>;
-                }
+{(() => {
+  const recipe = recipeData.find(r => 
+    r.recipeBrewingScale === selectedScale && r.shuboType === selectedType
+  );
+  
+  if (!recipe) {
+    return <p className="text-slate-500 text-center py-4">データがありません</p>;
+  }
 
-                const handleCellEdit = (field: keyof RecipeRawData, value: string) => {
-                  const numValue = value === '' ? null : parseFloat(value);
-                  const updatedRecipes = recipeData.map(r =>
-                    r.recipeBrewingScale === selectedScale && r.shuboType === selectedType
-                      ? { ...r, [field]: numValue }
-                      : r
-                  );
-                  setRecipeData(updatedRecipes);
-                  localStorage.setItem('shubo_recipe_data', JSON.stringify(updatedRecipes));
-                };
+  // handleCellEditをここで定義（この即時関数の中）
+  const handleCellEdit = (field: keyof RecipeRawData, value: string) => {
+    const numValue = value === '' ? null : parseFloat(value);
+    const updatedRecipes = recipeData.map(r =>
+      r.recipeBrewingScale === selectedScale && r.shuboType === selectedType
+        ? { ...r, [field]: numValue }
+        : r
+    );
+    setRecipeData(updatedRecipes);
+    localStorage.setItem('shubo_recipe_data', JSON.stringify(updatedRecipes));
+    
+    // dataContextのstateも更新
+    if (dataContext?.setRecipeRawData) {
+      dataContext.setRecipeRawData(updatedRecipes);
+    }
+  };
 
-                return (
+  return (
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>

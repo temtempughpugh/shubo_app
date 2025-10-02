@@ -79,6 +79,37 @@ export function useData() {
     configuredShuboData.map(s => `${s.shuboNumber}-${s.selectedTankId}-${s.shuboStartDate}`).join(',')
   ]);
 
+  // recipeRawDataが変更されたら、configuredShuboDataのrecipeDataを更新
+  useEffect(() => {
+    if (recipeRawData.length > 0 && configuredShuboData.length > 0) {
+      const updatedConfigured = configuredShuboData.map(shubo => {
+        const recipe = recipeRawData.find(r => 
+          r.shuboType === shubo.shuboType && 
+          r.recipeBrewingScale === shubo.originalData.brewingScale
+        );
+        if (recipe) {
+          return {
+            ...shubo,
+            recipeData: {
+              totalRice: recipe.recipeTotalRice,
+              steamedRice: recipe.steamedRice,
+              kojiRice: recipe.kojiRice,
+              water: recipe.water,
+              measurement: recipe.measurement,
+              lacticAcid: recipe.lacticAcid
+            }
+          };
+        }
+        return shubo;
+      });
+      
+      // 変更があった場合のみ更新
+      if (JSON.stringify(updatedConfigured) !== JSON.stringify(configuredShuboData)) {
+        setConfiguredShuboData(updatedConfigured);
+      }
+    }
+  }, [recipeRawData.length, JSON.stringify(recipeRawData)]);  // ← ここを修正
+
   async function loadAllCSVData() {
   try {
     setIsLoading(true);
@@ -223,6 +254,7 @@ export function useData() {
     shuboRawData,
     setShuboRawData,
     recipeRawData,
+    setRecipeRawData,  // ← 追加
     tankConversionMap,
     
     // Processed Data

@@ -125,8 +125,11 @@ export default function App() {
           />
         )}
          {currentPage === 'analysis-settings' && (
-        <AnalysisSettings onClose={() => setCurrentPage('dashboard')} />
-      )}
+  <AnalysisSettings 
+    onClose={() => setCurrentPage('dashboard')}
+    dataContext={dataContext}
+  />
+)}
        {currentPage === 'csv-update' && (
         <CSVUpdate dataContext={dataContext} onClose={() => setCurrentPage('dashboard')} />
       )}
