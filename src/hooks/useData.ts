@@ -61,23 +61,22 @@ export function useData() {
 
   // configuredShuboDataが変更されたら統合データを更新
   useEffect(() => {
-    if (configuredShuboData.length > 0) {
-      // 表示名を更新
-      const updatedConfigured = updateDualShuboDisplayNames(configuredShuboData);
-      const hasChanged = JSON.stringify(updatedConfigured) !== JSON.stringify(configuredShuboData);
-      
-      if (hasChanged) {
-        setConfiguredShuboData(updatedConfigured);
-      }
-      
-      // 統合データを生成
-      const merged = createMergedShuboData(configuredShuboData);
-      setMergedShuboData(merged);
+  if (configuredShuboData.length > 0) {
+    const updatedConfigured = updateDualShuboDisplayNames(configuredShuboData);
+    const hasChanged = JSON.stringify(updatedConfigured) !== JSON.stringify(configuredShuboData);
+    
+    if (hasChanged) {
+      setConfiguredShuboData(updatedConfigured);
     }
-  }, [
-    configuredShuboData.length,
-    configuredShuboData.map(s => `${s.shuboNumber}-${s.selectedTankId}-${s.shuboStartDate}`).join(',')
-  ]);
+    
+    const merged = createMergedShuboData(configuredShuboData);
+    setMergedShuboData(merged);
+  }
+}, [
+  configuredShuboData.length,
+  configuredShuboData.map(s => `${s.shuboNumber}-${s.selectedTankId}-${s.shuboStartDate}`).join(','),
+  JSON.stringify(configuredShuboData.map(s => s.recipeData))  // ← 追加
+]);
 
   // recipeRawDataが変更されたら、configuredShuboDataのrecipeDataを更新
   useEffect(() => {
