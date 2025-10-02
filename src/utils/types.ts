@@ -24,6 +24,21 @@ export interface RecipeRawData {
   water: number;
   measurement: number;
   lacticAcid: number;
+  // 新規追加
+  初添_総米: number | null;
+  初添_掛米: number | null;
+  初添_麹米: number | null;
+  初添_汲み水: number | null;
+  仲添_総米: number | null;
+  仲添_掛米: number | null;
+  仲添_麹米: number | null;
+  仲添_汲み水: number | null;
+  留添_総米: number | null;
+  留添_掛米: number | null;
+  留添_麹米: number | null;
+  留添_汲み水: number | null;
+  三段総米: number | null;
+  留までの汲水歩合: number | null;
 }
 
 export interface TankConversionRawData {

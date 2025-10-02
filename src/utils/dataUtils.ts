@@ -184,6 +184,7 @@ export function parseShuboCSV(csvData: string[][]): ShuboRawData[] {
 }
 
 // shubo_sikomi.csv解析
+// shubo_sikomi.csv解析
 export function parseRecipeCSV(csvData: string[][]): RecipeRawData[] {
   const results: RecipeRawData[] = [];
   
@@ -200,6 +201,21 @@ export function parseRecipeCSV(csvData: string[][]): RecipeRawData[] {
       water: parseInt(row[5]) || 0,
       measurement: parseInt(row[6]) || 0,
       lacticAcid: parseInt(row[7]) || 0,
+      // 新規列の追加（null可能）
+      初添_総米: row[8] ? parseFloat(row[8]) : null,
+      初添_掛米: row[9] ? parseFloat(row[9]) : null,
+      初添_麹米: row[10] ? parseFloat(row[10]) : null,
+      初添_汲み水: row[11] ? parseFloat(row[11]) : null,
+      仲添_総米: row[12] ? parseFloat(row[12]) : null,
+      仲添_掛米: row[13] ? parseFloat(row[13]) : null,
+      仲添_麹米: row[14] ? parseFloat(row[14]) : null,
+      仲添_汲み水: row[15] ? parseFloat(row[15]) : null,
+      留添_総米: row[16] ? parseFloat(row[16]) : null,
+      留添_掛米: row[17] ? parseFloat(row[17]) : null,
+      留添_麹米: row[18] ? parseFloat(row[18]) : null,
+      留添_汲み水: row[19] ? parseFloat(row[19]) : null,
+      三段総米: row[20] ? parseFloat(row[20]) : null,
+      留までの汲水歩合: row[21] ? parseFloat(row[21]) : null,
     };
     
     results.push(recipeData);

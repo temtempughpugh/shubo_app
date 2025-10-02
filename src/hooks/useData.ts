@@ -26,7 +26,10 @@ export function useData() {
     STORAGE_KEYS.SHUBO_RAW_DATA,
     []
   );
-  const [recipeRawData, setRecipeRawData] = useState<RecipeRawData[]>([]);
+  const [recipeRawData, setRecipeRawData] = useLocalStorage<RecipeRawData[]>(
+    'shubo_recipe_data',
+    []
+  );
   const [tankConversionMap, setTankConversionMap] = useState<Map<string, TankConversionRawData[]>>(new Map());
   
   // Processed Data (localStorage)
@@ -99,11 +102,14 @@ export function useData() {
       loadCSV('/data/tank_quick_reference.csv')
     ]);
 
-    const parsedRecipeData = parseRecipeCSV(recipeCSV);
     const parsedTankMap = parseTankConversionCSV(tankCSV);
-
-    setRecipeRawData(parsedRecipeData);
     setTankConversionMap(parsedTankMap);
+
+    // recipeRawDataが空の場合のみCSVから読み込み
+    if (recipeRawData.length === 0) {
+      const parsedRecipeData = parseRecipeCSV(recipeCSV);
+      setRecipeRawData(parsedRecipeData); // useLocalStorageが自動保存
+    }
 
     if (tankConfigData.length === 0) {
       initializeTankConfig(parsedTankMap);
@@ -111,7 +117,7 @@ export function useData() {
 
     console.log('CSV読み込み完了:', {
       酒母データ: parsedShuboData.length,
-      レシピデータ: parsedRecipeData.length,
+      レシピデータ: recipeRawData.length,
       タンクデータ: parsedTankMap.size
     });
 
