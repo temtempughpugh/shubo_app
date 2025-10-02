@@ -18,7 +18,7 @@ export default function AnalysisSettings({ onClose, dataContext }: AnalysisSetti
   const [selectedScale, setSelectedScale] = useState<number>(400);
   const [selectedType, setSelectedType] = useState<string>('速醸');
   // ========== ここまで追加 ==========
-
+const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   // 仕込み配合データの読み込み
 // 仕込み配合データの読み込み
 // 仕込み配合データの読み込み
@@ -59,6 +59,18 @@ useEffect(() => {
   
   loadRecipeData();
 }, []);
+
+const handleSaveChanges = () => {
+  localStorage.setItem('shubo_recipe_data', JSON.stringify(recipeData));
+  
+  // dataContextのstateも更新
+  if (dataContext?.setRecipeRawData) {
+    dataContext.setRecipeRawData(recipeData);
+  }
+  
+  setHasUnsavedChanges(false);
+  alert('変更を保存しました');
+};
   // ========== ここまで追加 ==========
   const toggleDay = (type: 'speed' | 'highTemp', day: number) => {
     setSettings(prev => ({
@@ -496,20 +508,18 @@ useEffect(() => {
 
   // handleCellEditをここで定義（この即時関数の中）
   const handleCellEdit = (field: keyof RecipeRawData, value: string) => {
-    const numValue = value === '' ? null : parseFloat(value);
-    const updatedRecipes = recipeData.map(r =>
-      r.recipeBrewingScale === selectedScale && r.shuboType === selectedType
-        ? { ...r, [field]: numValue }
-        : r
-    );
-    setRecipeData(updatedRecipes);
-    localStorage.setItem('shubo_recipe_data', JSON.stringify(updatedRecipes));
-    
-    // dataContextのstateも更新
-    if (dataContext?.setRecipeRawData) {
-      dataContext.setRecipeRawData(updatedRecipes);
-    }
-  };
+  const numValue = value === '' ? null : parseFloat(value);
+  const updatedRecipes = recipeData.map(r =>
+    r.recipeBrewingScale === selectedScale && r.shuboType === selectedType
+      ? { ...r, [field]: numValue }
+      : r
+  );
+  setRecipeData(updatedRecipes);
+  setHasUnsavedChanges(true);  // 変更フラグを立てる
+  
+  // localStorageとdataContextへの保存は削除
+};
+
 
   return (
                   <div className="overflow-x-auto">
@@ -705,10 +715,23 @@ useEffect(() => {
                   </div>
                 );
               })()}
-
-              <p className="text-xs text-slate-500 mt-3">
-                ※各セルをクリックして編集可能。編集内容は自動保存されます。
+<p className="text-xs text-slate-500 mt-3">
+                ※各セルをクリックして編集可能。「変更を保存」ボタンで保存されます。
               </p>
+              
+              {/* ========== ここに追加 ========== */}
+              {hasUnsavedChanges && (
+                <div className="mt-4 text-center">
+                  <button
+                    onClick={handleSaveChanges}
+                    className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold shadow-lg transition-all"
+                  >
+                    💾 変更を保存
+                  </button>
+                </div>
+              )}
+              {/* ========== ここまで ========== */}
+              
             </div>
           </div>
         </div>
