@@ -249,34 +249,35 @@ export function useData() {
   }
 
   return {
-    // Raw Data
-    shuboRawData,
-    setShuboRawData,
-    recipeRawData,
-    setRecipeRawData,  // ← 追加
-    tankConversionMap,
-    
-    // Processed Data
-    configuredShuboData,
-    mergedShuboData,
-    tankConfigData,
-    dailyRecordsData,
-    
-    // Loading状態
-    isLoading,
-    loadError,
-    
-    // ヘルパー関数
-    getTankConversions,
-    getEnabledTanks,
-    getRecommendedTanks,
-    updateTankConfig,
-    saveConfiguredShubo,
-    removeConfiguredShubo,
-    updateDailyRecord,
-    getDailyRecords,
-    
-    // 再読み込み
-    reloadData: loadAllCSVData,
-  };
+  // Raw Data
+  shuboRawData,
+  setShuboRawData,
+  recipeRawData,
+  setRecipeRawData,
+  tankConversionMap,
+  
+  // Processed Data
+  configuredShuboData,
+  setConfiguredShuboData,  // ← これを追加
+  mergedShuboData,
+  tankConfigData,
+  dailyRecordsData,
+  
+  // Loading状態
+  isLoading,
+  loadError,
+  
+  // ヘルパー関数
+  getTankConversions,
+  getEnabledTanks,
+  getRecommendedTanks,
+  updateTankConfig,
+  saveConfiguredShubo,
+  removeConfiguredShubo,
+  updateDailyRecord,
+  getDailyRecords,
+  
+  // 再読み込み
+  reloadData: loadAllCSVData,
+};
 }

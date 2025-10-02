@@ -63,9 +63,35 @@ useEffect(() => {
 const handleSaveChanges = () => {
   localStorage.setItem('shubo_recipe_data', JSON.stringify(recipeData));
   
-  // dataContextのstateも更新
+  // dataContextのrecipeRawDataを更新
   if (dataContext?.setRecipeRawData) {
     dataContext.setRecipeRawData(recipeData);
+  }
+  
+  // configuredShuboDataも明示的に更新
+  if (dataContext?.configuredShuboData && dataContext?.setConfiguredShuboData) {
+    const updatedConfigured = dataContext.configuredShuboData.map((shubo: any) => {
+      const recipe = recipeData.find(r => 
+        r.shuboType === shubo.shuboType && 
+        r.recipeBrewingScale === shubo.originalData.brewingScale
+      );
+      if (recipe) {
+        return {
+          ...shubo,
+          recipeData: {
+            totalRice: recipe.recipeTotalRice,
+            steamedRice: recipe.steamedRice,
+            kojiRice: recipe.kojiRice,
+            water: recipe.water,
+            measurement: recipe.measurement,
+            lacticAcid: recipe.lacticAcid
+          }
+        };
+      }
+      return shubo;
+    });
+    
+    dataContext.setConfiguredShuboData(updatedConfigured);
   }
   
   setHasUnsavedChanges(false);
