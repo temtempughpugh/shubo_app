@@ -14,6 +14,7 @@ interface DashboardProps {
     shuboRawData: any[];
     recipeRawData: any[];
     tankConversionMap: Map<string, any[]>;
+    tankConfigData: any[];
     configuredShuboData: ConfiguredShuboData[];
     mergedShuboData: MergedShuboData[];
     dailyRecordsData: DailyRecordData[];
@@ -41,7 +42,7 @@ interface DischargeInput {
     beforeDischargeKensyaku: number | null;
     afterDischargeCapacity: number | null;
     destinationTank: string;
-    dischargeWater: number | null;
+    iceAmount: number | null;
   };
 }
 
@@ -720,6 +721,9 @@ if (isDual) {
                       <th className="px-3 py-2 text-left text-xs font-bold">卸し量</th>
                       <th className="px-3 py-2 text-left text-xs font-bold">添タンク</th>
                       <th className="px-3 py-2 text-left text-xs font-bold">汲み水量</th>
+                      <th className="px-3 py-2 text-left text-xs font-bold">氷量</th>
+                      <th className="px-3 py-2 text-left text-xs font-bold">準備添汲水量</th>
+                      <th className="px-3 py-2 text-left text-xs font-bold">準備添汲水尺</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -736,7 +740,7 @@ if (isDual) {
                         beforeDischargeKensyaku: null,
                         afterDischargeCapacity: null,
                         destinationTank: '',
-                        dischargeWater: null
+                        iceAmount: null
                       };
                       const beforeCapacity = input.beforeDischargeKensyaku 
                         ? getCapacityFromKensyaku(shubo.selectedTankId, input.beforeDischargeKensyaku) 
@@ -747,6 +751,35 @@ if (isDual) {
                         : null;
                       const dischargeAmount = beforeCapacity !== null && afterCapacity !== null
                         ? beforeCapacity - afterCapacity 
+                        : null;
+
+                      // 仕込み配合から初添_汲み水を取得（2個酛対応）
+                      const isDual = shubo.primaryNumber !== shubo.secondaryNumber;
+                      let soeWaterReference: number | null = null;
+                      
+                      if (isDual && shubo.individualRecipeData && shubo.individualRecipeData[dischargeIndex]) {
+                        // 2個酛の場合は個別のレシピから取得
+                        const individualRecipe = dataContext.recipeRawData.find(r => 
+                          r.shuboType === shubo.shuboType && 
+                          r.recipeBrewingScale === shubo.originalData[dischargeIndex].brewingScale
+                        );
+                        soeWaterReference = individualRecipe?.初添_汲み水 || null;
+                      } else {
+                        // 通常の酛の場合
+                        const recipe = dataContext.recipeRawData.find(r => 
+                          r.shuboType === shubo.shuboType && 
+                          r.recipeBrewingScale === shubo.originalData[0].brewingScale
+                        );
+                        soeWaterReference = recipe?.初添_汲み水 || null;
+                      }
+
+                      // 準備添汲水量と尺の計算
+                      // 準備添汲水量と尺の計算
+                      const preparationSoeWater = soeWaterReference !== null && input.iceAmount !== null
+                        ? soeWaterReference - input.iceAmount
+                        : null;
+                      const preparationSoeKensyaku = preparationSoeWater !== null && input.destinationTank
+                        ? getKensyakuFromCapacity(input.destinationTank, preparationSoeWater)
                         : null;
 
                       return (
@@ -793,9 +826,8 @@ if (isDual) {
                             {dischargeAmount ? `${dischargeAmount}L` : '-'}
                           </td>
                           <td className="px-3 py-2">
-                            <input 
-                              type="text" 
-                              value={input.destinationTank} 
+                            <select
+                              value={input.destinationTank}
                               onChange={(e) => setDischargeInput({
                                 ...dischargeInput,
                                 [inputKey]: {
@@ -803,24 +835,40 @@ if (isDual) {
                                   destinationTank: e.target.value
                                 }
                               })}
-                              placeholder="" 
-                              className="w-20 px-2 py-1 text-sm border rounded" 
-                            />
+                              className="w-24 px-2 py-1 text-sm border rounded"
+                            >
+                              <option value="">選択</option>
+                              {dataContext.tankConfigData
+                                .map((tank: any) => (
+                                  <option key={tank.tankId} value={tank.tankId}>
+                                    {tank.tankId}
+                                  </option>
+                                ))}
+                            </select>
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">
+                            {soeWaterReference ? `${soeWaterReference}L` : '-'}
                           </td>
                           <td className="px-3 py-2">
                             <input 
                               type="number" 
-                              value={input.dischargeWater || ''} 
+                              value={input.iceAmount || ''} 
                               onChange={(e) => setDischargeInput({
                                 ...dischargeInput,
                                 [inputKey]: {
                                   ...input,
-                                  dischargeWater: e.target.value ? parseFloat(e.target.value) : null
+                                  iceAmount: e.target.value ? parseFloat(e.target.value) : null
                                 }
                               })}
-                              placeholder="" 
+                              placeholder="0" 
                               className="w-16 px-2 py-1 text-sm border rounded" 
                             />
+                          </td>
+                          <td className="px-3 py-2 text-green-700 font-bold">
+                            {preparationSoeWater !== null ? `${preparationSoeWater}L` : '-'}
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">
+                            {preparationSoeKensyaku !== null ? `${preparationSoeKensyaku}mm` : '-'}
                           </td>
                         </tr>
                       );
