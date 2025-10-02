@@ -169,18 +169,21 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
   const handleExport = () => {
     try {
       const exportData = {
-        exportDate: new Date().toISOString(),
-        version: '1.0',
-        data: {
-          shubo_raw_data: localStorage.getItem(STORAGE_KEYS.SHUBO_RAW_DATA),
-          shubo_configured_data: localStorage.getItem(STORAGE_KEYS.CONFIGURED_SHUBO_DATA),
-          shubo_daily_records: localStorage.getItem(STORAGE_KEYS.DAILY_RECORDS_DATA),
-          shubo_tank_config: localStorage.getItem(STORAGE_KEYS.TANK_CONFIG_DATA),
-          shubo_analysis_settings: localStorage.getItem(STORAGE_KEYS.ANALYSIS_SETTINGS),
-          shubo_csv_update_history: localStorage.getItem(STORAGE_KEYS.CSV_UPDATE_HISTORY),
-          shubo_daily_environment: localStorage.getItem(STORAGE_KEYS.DAILY_ENVIRONMENT),
-        }
-      };
+  exportDate: new Date().toISOString(),
+  version: '1.0',
+  data: {
+    shubo_raw_data: localStorage.getItem(STORAGE_KEYS.SHUBO_RAW_DATA),
+    shubo_recipe_data: localStorage.getItem('shubo_recipe_data'),  // 追加
+    shubo_configured_data: localStorage.getItem(STORAGE_KEYS.CONFIGURED_SHUBO_DATA),
+    shubo_daily_records: localStorage.getItem(STORAGE_KEYS.DAILY_RECORDS_DATA),
+    shubo_tank_config: localStorage.getItem(STORAGE_KEYS.TANK_CONFIG_DATA),
+    shubo_analysis_settings: localStorage.getItem(STORAGE_KEYS.ANALYSIS_SETTINGS),
+    shubo_csv_update_history: localStorage.getItem(STORAGE_KEYS.CSV_UPDATE_HISTORY),
+    shubo_daily_environment: localStorage.getItem(STORAGE_KEYS.DAILY_ENVIRONMENT),
+    shubo_brewing_preparation: localStorage.getItem(STORAGE_KEYS.BREWING_PREPARATION),  // 追加
+    shubo_discharge_schedule: localStorage.getItem(STORAGE_KEYS.DISCHARGE_SCHEDULE),  // 追加
+  }
+};
 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -856,16 +859,19 @@ const getAirTemp = (record: DailyRecordData) => {
       border-radius: 1mm;
     }
 
-    .graph-container {
+  .graph-container {
       margin-bottom: 3mm;
       padding: 2mm;
       background: #f1f5f9;
       border: 1px solid #cbd5e1;
       border-radius: 1mm;
+      max-width: 100%;
+      overflow-x: hidden;
     }
 
-    .table-container {
-      overflow-x: auto;
+    .graph-container svg {
+      max-width: 100%;
+      height: auto;
     }
 
     table {
