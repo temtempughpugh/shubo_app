@@ -564,7 +564,7 @@ const lacticAcidStr = formatRecipeValue('lacticAcid', 'ml');
 
     const columnWidths = sortedRecords.map(() => (graphWidth - padding.left - padding.right) / sortedRecords.length);
 
-    let svg = `<svg width="${graphWidth}" height="${graphHeight}" style="background: white; border: 1px solid #cbd5e1;">`;
+    let svg = `<svg width="${graphWidth}" height="${graphHeight}" viewBox="0 0 ${graphWidth} ${graphHeight}" preserveAspectRatio="xMidYMid meet" style="background: white; border: 1px solid #cbd5e1;">`;
 
     for (let temp = 0; temp <= 30; temp += 2) {
       const strokeColor = temp % 10 === 0 ? '#94a3b8' : '#e2e8f0';
