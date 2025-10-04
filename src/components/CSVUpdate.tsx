@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { parseShuboCSV, convertExcelDateToJs, generateDailyRecords } from '../utils/dataUtils';
+import { parseShuboCSV, convertExcelDateToJs, generateDailyRecords, updateDualShuboDisplayNames } from '../utils/dataUtils';
 import type { ShuboRawData, CSVUpdateHistory, MergedShuboData, DailyRecordData } from '../utils/types';
 import { STORAGE_KEYS } from '../utils/types';
 
@@ -8,6 +8,7 @@ interface CSVUpdateProps {
     shuboRawData: ShuboRawData[];
     setShuboRawData: (data: ShuboRawData[]) => void;
     configuredShuboData: any[];
+    setConfiguredShuboData: (data: any[]) => void;  // ← この行を追加
     mergedShuboData: MergedShuboData[];
     getDailyRecords: (shuboNumber: number) => DailyRecordData[];
     tankConversionMap: Map<string, any[]>;
@@ -133,13 +134,83 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
       localStorage.setItem(STORAGE_KEYS.SHUBO_RAW_DATA, JSON.stringify(mergedShuboData));
       dataContext.setShuboRawData(mergedShuboData);
 
-      const currentConfigured = dataContext.configuredShuboData;
-      const filtered = currentConfigured.filter(c => !preview.toUpdate.includes(c.shuboNumber));
-      localStorage.setItem(STORAGE_KEYS.CONFIGURED_SHUBO_DATA, JSON.stringify(filtered));
+      // configured_dataのマージ処理（手動設定を保持）
+// configured_dataのマージ処理（手動設定を保持）
+// configured_dataのマージ処理（手動設定を保持）
+const currentConfigured = dataContext.configuredShuboData;
 
-      const dailyRecords = JSON.parse(localStorage.getItem(STORAGE_KEYS.DAILY_RECORDS_DATA) || '[]');
-      const filteredRecords = dailyRecords.filter((r: any) => !preview.toUpdate.includes(r.shuboNumber));
-      localStorage.setItem(STORAGE_KEYS.DAILY_RECORDS_DATA, JSON.stringify(filteredRecords));
+// 更新日より前のデータは保持
+const keptConfigured = currentConfigured.filter(c => !preview.toUpdate.includes(c.shuboNumber));
+
+// 更新対象のデータをマージ（既存の手動設定を保持）
+const updatedConfigured = preview.toUpdate.map(shuboNum => {
+  const existing = currentConfigured.find(c => c.shuboNumber === shuboNum);
+  const newRaw = newShuboData.find(s => s.shuboNumber === shuboNum);
+  
+  if (!newRaw) return null;
+  
+  // 既存データがあれば手動設定を保持してCSV基本情報を更新
+  if (existing) {
+    return {
+      ...existing,
+      // CSVから更新する項目
+      shuboStartDate: convertExcelDateToJs(parseFloat(newRaw.shuboStartDate)),
+      shuboEndDate: convertExcelDateToJs(parseFloat(newRaw.shuboEndDate)),
+      shuboDays: newRaw.shuboDays,
+      fiscalYear: newRaw.fiscalYear,
+      originalData: newRaw,
+      // selectedTankId, shuboType, recipeData, tankData は保持
+    };
+  }
+  
+  return null;
+}).filter(Boolean);
+
+const mergedConfigured = [...keptConfigured, ...updatedConfigured];
+
+// dualShuboInfoとdisplayNameを再計算
+const updatedWithDualInfo = updateDualShuboDisplayNames(mergedConfigured);
+
+// localStorageに保存
+localStorage.setItem(STORAGE_KEYS.CONFIGURED_SHUBO_DATA, JSON.stringify(updatedWithDualInfo));
+
+// Reactのstateを直接更新（これが重要！）
+dataContext.setConfiguredShuboData(updatedWithDualInfo);
+
+      // daily_recordsのマージ処理（入力データを保持）
+const dailyRecords = JSON.parse(localStorage.getItem(STORAGE_KEYS.DAILY_RECORDS_DATA) || '[]');
+
+// 更新日より前のデータは保持
+const keptRecords = dailyRecords.filter((r: any) => !preview.toUpdate.includes(r.shuboNumber));
+
+// 更新対象の日別記録を保持（日付が変わっても可能な限り保持）
+const updatedRecords = dailyRecords.filter((r: any) => preview.toUpdate.includes(r.shuboNumber)).map((record: any) => {
+  const newRaw = newShuboData.find(s => s.shuboNumber === record.shuboNumber);
+  if (!newRaw) return null;
+  
+  const newStartDate = convertExcelDateToJs(parseFloat(newRaw.shuboStartDate));
+  const newEndDate = convertExcelDateToJs(parseFloat(newRaw.shuboEndDate));
+  
+  // 記録日が新しい仕込み期間内に収まっているか確認
+  const recordDate = new Date(record.recordDate);
+  recordDate.setHours(0, 0, 0, 0);
+  newStartDate.setHours(0, 0, 0, 0);
+  newEndDate.setHours(0, 0, 0, 0);
+  
+  if (recordDate >= newStartDate && recordDate <= newEndDate) {
+    // 期間内なら保持（fiscalYearのみ更新）
+    return {
+      ...record,
+      fiscalYear: newRaw.fiscalYear
+    };
+  }
+  
+  // 期間外なら破棄
+  return null;
+}).filter(Boolean);
+
+const mergedRecords = [...keptRecords, ...updatedRecords];
+localStorage.setItem(STORAGE_KEYS.DAILY_RECORDS_DATA, JSON.stringify(mergedRecords));
 
       const newHistory: CSVUpdateHistory = {
         updateDate: new Date(updateDate),
