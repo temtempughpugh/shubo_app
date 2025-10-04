@@ -197,6 +197,7 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
       shuboStartDate,
       shuboEndDate,
       shuboDays: calculatedDays,
+      fiscalYear: shuboData.fiscalYear,  // ← この1行を追加
       recipeData: {
         // 修正: すべてそのまま保存（半分にしない）
         totalRice: recipe.recipeTotalRice,

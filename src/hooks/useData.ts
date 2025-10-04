@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { 
   ShuboRawData, 
   RecipeRawData, 
@@ -51,8 +51,17 @@ export function useData() {
   );
   
   // Loading状態
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  // Loading状態
+const [isLoading, setIsLoading] = useState(true);
+const [loadError, setLoadError] = useState<string | null>(null);
+
+// 年度管理
+const [currentFiscalYear, setCurrentFiscalYear] = useState<number>(() => {
+  const today = new Date();
+  const month = today.getMonth();
+  const year = today.getFullYear();
+  return month >= 6 ? year : year - 1;
+});
 
   // CSV読み込み
   useEffect(() => {
@@ -112,6 +121,37 @@ useEffect(() => {
     }
   }
 }, [recipeRawData.length, JSON.stringify(recipeRawData)]);
+
+  // 利用可能な年度一覧を取得
+  const availableFiscalYears = useMemo(() => {
+    const years = new Set<number>();
+    shuboRawData.forEach(shubo => {
+      if (shubo.fiscalYear) {
+        years.add(shubo.fiscalYear);
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a); // 降順
+  }, [shuboRawData]);
+
+  // 年度フィルタリング済みのmergedShuboDataを取得
+  const filteredMergedShuboData = useMemo(() => {
+    return mergedShuboData.filter(shubo => shubo.fiscalYear === currentFiscalYear);
+  }, [mergedShuboData, currentFiscalYear]);
+
+  // 年度フィルタリング済みのconfiguredShuboDataを取得
+  const filteredConfiguredShuboData = useMemo(() => {
+    return configuredShuboData.filter(shubo => shubo.fiscalYear === currentFiscalYear);
+  }, [configuredShuboData, currentFiscalYear]);
+
+  // 年度フィルタリング済みのdailyRecordsDataを取得
+  const filteredDailyRecordsData = useMemo(() => {
+    return dailyRecordsData.filter(record => record.fiscalYear === currentFiscalYear);
+  }, [dailyRecordsData, currentFiscalYear]);
+
+  // 年度フィルタリング済みのshuboRawDataを取得
+const filteredShuboRawData = useMemo(() => {
+  return shuboRawData.filter((shubo: ShuboRawData) => shubo.fiscalYear === currentFiscalYear);
+}, [shuboRawData, currentFiscalYear]);
 
   async function loadAllCSVData() {
   try {
@@ -249,24 +289,29 @@ useEffect(() => {
   }
 
   function getDailyRecords(shuboNumber: number): DailyRecordData[] {
-    return dailyRecordsData.filter(record => record.shuboNumber === shuboNumber);
-  }
+  return filteredDailyRecordsData.filter(record => record.shuboNumber === shuboNumber);
+}
 
   return {
   // Raw Data
-  shuboRawData,
+  shuboRawData: filteredShuboRawData,
   setShuboRawData,
   recipeRawData,
   setRecipeRawData,
   tankConversionMap,
   
-  // Processed Data
-  configuredShuboData,
-  setConfiguredShuboData,  // ← これを追加
-  mergedShuboData,
-  setMergedShuboData,  // ← これを追加
+  // Processed Data（年度フィルタリング済み）
+  configuredShuboData: filteredConfiguredShuboData,
+  setConfiguredShuboData,
+  mergedShuboData: filteredMergedShuboData,
+  setMergedShuboData,
   tankConfigData,
-  dailyRecordsData,
+  dailyRecordsData: filteredDailyRecordsData,
+  
+  // 年度管理
+  currentFiscalYear,
+  setCurrentFiscalYear,
+  availableFiscalYears,
   
   // Loading状態
   isLoading,

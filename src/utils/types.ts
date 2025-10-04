@@ -13,6 +13,7 @@ export interface ShuboRawData {
   shuboEndDate: string;
   shuboDays: number;
   yeast: string;
+  fiscalYear: number;  // ← 追加
 }
 
 export interface RecipeRawData {
@@ -56,6 +57,7 @@ export interface ConfiguredShuboData {
   shuboStartDate: Date;
   shuboEndDate: Date;
   shuboDays: number;
+  fiscalYear: number;  // ← 追加
   recipeData: {
     totalRice: number;
     steamedRice: number;
@@ -90,6 +92,7 @@ export interface MergedShuboData {
   shuboStartDate: Date;
   shuboEndDates: Date[];
   maxShuboDays: number;
+  fiscalYear: number;  // ← 追加
   recipeData: {
     totalRice: number;
     steamedRice: number;
@@ -123,6 +126,7 @@ export interface DailyRecordData {
   dayNumber: number;
   dayLabel: string;
   timeSlot: string;
+  fiscalYear: number;  // ← 追加
   temperature: number | null;  // 既存（互換性のため残す）
   temperature1: number | null;  // 品温① (1日目→水麹温度, 2日目以降→品温)
   temperature2: number | null;  // 品温② (1日目→仕込温度, 2日目以降→連動なし)

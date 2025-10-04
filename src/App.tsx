@@ -47,13 +47,28 @@ export default function App() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* ナビゲーションバー */}
       <nav className="bg-gradient-to-r from-blue-700 to-blue-900 text-white shadow-xl">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">🍶 酒母管理システム</h1>
-            
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setCurrentPage('dashboard')}
+  <div className="max-w-7xl mx-auto px-6 py-4">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center space-x-6">
+        <h1 className="text-2xl font-bold">🍶 酒母管理システム</h1>
+        
+        {/* 年度切り替え */}
+        <select
+          value={dataContext.currentFiscalYear}
+          onChange={(e) => dataContext.setCurrentFiscalYear(Number(e.target.value))}
+          className="px-3 py-1.5 bg-blue-800 border border-blue-600 rounded-lg font-bold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-white transition-all"
+        >
+          {dataContext.availableFiscalYears.map(year => (
+            <option key={year} value={year} className="bg-blue-800">
+              {year}年度 (BY)
+            </option>
+          ))}
+        </select>
+      </div>
+      
+      <div className="flex space-x-2">
+        <button
+          onClick={() => setCurrentPage('dashboard')}
                 className={`px-5 py-2.5 rounded-lg font-bold transition-all duration-200 ${
                   currentPage === 'dashboard'
                     ? 'bg-white text-blue-700 shadow-lg'

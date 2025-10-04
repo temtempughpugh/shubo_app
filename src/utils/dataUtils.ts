@@ -1,5 +1,12 @@
 import type { ShuboRawData, RecipeRawData, TankConversionRawData, ConfiguredShuboData, MergedShuboData, DailyRecordData } from './types';
 
+export function calculateFiscalYear(date: Date): number {
+  const month = date.getMonth(); // 0-11
+  const year = date.getFullYear();
+  // 7月(月6)以降なら当年度、6月(月5)以前なら前年度
+  return month >= 6 ? year : year - 1;
+}
+
 // Excelシリアル値をJavaScript Dateに変換
 export function convertExcelDateToJs(excelDate: number): Date {
   const excelEpoch = new Date(1899, 11, 30);
@@ -43,9 +50,7 @@ export function dateToKey(date: Date): string {
 // 日別記録生成
 export function generateDailyRecords(shubo: MergedShuboData): DailyRecordData[] {
   const records: DailyRecordData[] = [];
-  console.log('shubo.maxShuboDays:', shubo.maxShuboDays);
-console.log('typeof maxShuboDays:', typeof shubo.maxShuboDays);
-  // shuboStartDateを確実にDate型に変換
+  
   const startDate = shubo.shuboStartDate instanceof Date 
     ? new Date(shubo.shuboStartDate.getTime()) 
     : new Date(shubo.shuboStartDate);
@@ -65,20 +70,20 @@ console.log('typeof maxShuboDays:', typeof shubo.maxShuboDays);
       dayLabel = '卸し';
     }
 
-    // デフォルト分析日の判定
-    // デフォルト分析日の判定
     const savedSettings = localStorage.getItem('shubo_analysis_settings');
     const settings = savedSettings ? JSON.parse(savedSettings) : { speed: [2, 7, 9], highTemp: [2, 5, 7] };
     const defaultAnalysisDays = shubo.shuboType === '速醸' 
       ? settings.speed 
       : settings.highTemp;
     const isDefaultAnalysisDay = day === totalDays || defaultAnalysisDays.includes(day);
+    
     records.push({
       shuboNumber: shubo.primaryNumber,
       recordDate: recordDate,
       dayNumber: day,
       dayLabel: dayLabel,
       timeSlot: '1-1',
+      fiscalYear: shubo.fiscalYear,  // ← 追加
       temperature: null,
       temperature1: null,
       temperature2: null,
@@ -91,7 +96,7 @@ console.log('typeof maxShuboDays:', typeof shubo.maxShuboDays);
       isAnalysisDay: isDefaultAnalysisDay
     });
   }
- console.log('Generated records count:', records.length);
+  
   return records;
 }
 
@@ -151,6 +156,7 @@ export async function loadCSV(filepath: string): Promise<string[][]> {
 }
 
 // shubo.csv解析
+// shubo.csv解析
 export function parseShuboCSV(csvData: string[][]): ShuboRawData[] {
   const results: ShuboRawData[] = [];
   
@@ -160,6 +166,11 @@ export function parseShuboCSV(csvData: string[][]): ShuboRawData[] {
     
     const shuboTotalRice = parseInt(row[22]) || 0;
     if (shuboTotalRice === 0) continue;
+    
+    // 仕込み日から年度を計算
+    const shuboStartDateSerial = parseInt(row[23]) || 0;
+    const shuboStartDate = shuboStartDateSerial > 0 ? convertExcelDateToJs(shuboStartDateSerial) : new Date();
+    const fiscalYear = calculateFiscalYear(shuboStartDate);  // ← 追加
     
     const shuboData: ShuboRawData = {
       shuboNumber: parseInt(row[0]) || 0,
@@ -175,6 +186,7 @@ export function parseShuboCSV(csvData: string[][]): ShuboRawData[] {
       shuboEndDate: row[24] || '',
       shuboDays: parseInt(row[25]) || 0,
       yeast: row[26] || '',
+      fiscalYear: fiscalYear  // ← 追加
     };
     
     results.push(shuboData);
@@ -395,26 +407,27 @@ export function createMergedShuboData(
       if (!secondary) continue;
       
       const mergedData: MergedShuboData = {
-  displayName: `${shubo.shuboNumber}・${secondary.shuboNumber}号`,
-  selectedTankId: shubo.selectedTankId,
-  shuboType: shubo.shuboType,
-  primaryNumber: shubo.shuboNumber,
-  secondaryNumber: secondary.shuboNumber,
-  shuboStartDate: shubo.shuboStartDate,
-  shuboEndDates: [shubo.shuboEndDate, secondary.shuboEndDate],
-  maxShuboDays: Math.max(shubo.shuboDays, secondary.shuboDays),
-  recipeData: {
-    totalRice: shubo.recipeData.totalRice + secondary.recipeData.totalRice,
-    steamedRice: shubo.recipeData.steamedRice + secondary.recipeData.steamedRice,
-    kojiRice: shubo.recipeData.kojiRice + secondary.recipeData.kojiRice,
-    water: shubo.recipeData.water + secondary.recipeData.water,
-    measurement: shubo.recipeData.measurement + secondary.recipeData.measurement,
-    lacticAcid: shubo.recipeData.lacticAcid + secondary.recipeData.lacticAcid
-  },
-  individualRecipeData: [shubo.recipeData, secondary.recipeData],
-  tankData: shubo.tankData,
-  originalData: [shubo.originalData, secondary.originalData]
-};
+        displayName: `${shubo.shuboNumber}・${secondary.shuboNumber}号`,
+        selectedTankId: shubo.selectedTankId,
+        shuboType: shubo.shuboType,
+        primaryNumber: shubo.shuboNumber,
+        secondaryNumber: secondary.shuboNumber,
+        shuboStartDate: shubo.shuboStartDate,
+        shuboEndDates: [shubo.shuboEndDate, secondary.shuboEndDate],
+        maxShuboDays: Math.max(shubo.shuboDays, secondary.shuboDays),
+        fiscalYear: shubo.fiscalYear,  // ← 追加
+        recipeData: {
+          totalRice: shubo.recipeData.totalRice + secondary.recipeData.totalRice,
+          steamedRice: shubo.recipeData.steamedRice + secondary.recipeData.steamedRice,
+          kojiRice: shubo.recipeData.kojiRice + secondary.recipeData.kojiRice,
+          water: shubo.recipeData.water + secondary.recipeData.water,
+          measurement: shubo.recipeData.measurement + secondary.recipeData.measurement,
+          lacticAcid: shubo.recipeData.lacticAcid + secondary.recipeData.lacticAcid
+        },
+        individualRecipeData: [shubo.recipeData, secondary.recipeData],
+        tankData: shubo.tankData,
+        originalData: [shubo.originalData, secondary.originalData]
+      };
       
       mergedList.push(mergedData);
       processed.add(shubo.shuboNumber);
@@ -422,19 +435,20 @@ export function createMergedShuboData(
       
     } else if (!dualInfo?.isDual) {
       const mergedData: MergedShuboData = {
-  displayName: `${shubo.shuboNumber}号`,
-  selectedTankId: shubo.selectedTankId,
-  shuboType: shubo.shuboType,
-  primaryNumber: shubo.shuboNumber,
-  secondaryNumber: shubo.shuboNumber,
-  shuboStartDate: shubo.shuboStartDate,
-  shuboEndDates: [shubo.shuboEndDate],
-  maxShuboDays: shubo.shuboDays,
-  recipeData: shubo.recipeData,
-  individualRecipeData: [shubo.recipeData],
-  tankData: shubo.tankData,
-  originalData: [shubo.originalData]
-};
+        displayName: `${shubo.shuboNumber}号`,
+        selectedTankId: shubo.selectedTankId,
+        shuboType: shubo.shuboType,
+        primaryNumber: shubo.shuboNumber,
+        secondaryNumber: shubo.shuboNumber,
+        shuboStartDate: shubo.shuboStartDate,
+        shuboEndDates: [shubo.shuboEndDate],
+        maxShuboDays: shubo.shuboDays,
+        fiscalYear: shubo.fiscalYear,  // ← 追加
+        recipeData: shubo.recipeData,
+        individualRecipeData: [shubo.recipeData],
+        tankData: shubo.tankData,
+        originalData: [shubo.originalData]
+      };
       
       mergedList.push(mergedData);
       processed.add(shubo.shuboNumber);
