@@ -5,12 +5,13 @@ import TankSettings from './components/TankSettings';
 import { useData } from './hooks/useData';
 import CSVUpdate from './components/CSVUpdate';
 import AnalysisSettings from './components/AnalysisSettings';
+import SupabaseTest from './components/SupabaseTest';  // ← 追加
 
-type Page = 'dashboard' | 'tank-assignment' | 'tank-settings' | 'analysis-settings' | 'csv-update';
+type Page = 'dashboard' | 'tank-assignment' | 'tank-settings' | 'analysis-settings' | 'csv-update' | 'supabase-test';  // ← 'supabase-test' 追加
 
 export default function App() {
   const dataContext = useData();
-  const [currentPage, setCurrentPage] = useState<Page>('dashboard');
+  const [currentPage, setCurrentPage] = useState<Page>('supabase-test');  // ← 初期ページを変更
 
   // 読み込み中
   if (dataContext.isLoading) {
@@ -47,28 +48,12 @@ export default function App() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* ナビゲーションバー */}
       <nav className="bg-gradient-to-r from-blue-700 to-blue-900 text-white shadow-xl">
-  <div className="max-w-7xl mx-auto px-6 py-4">
-    <div className="flex items-center justify-between">
-      <div className="flex items-center space-x-6">
-        <h1 className="text-2xl font-bold">🍶 酒母管理システム</h1>
-        
-        {/* 年度切り替え */}
-        <select
-          value={dataContext.currentFiscalYear}
-          onChange={(e) => dataContext.setCurrentFiscalYear(Number(e.target.value))}
-          className="px-3 py-1.5 bg-blue-800 border border-blue-600 rounded-lg font-bold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-white transition-all"
-        >
-          {dataContext.availableFiscalYears.map(year => (
-            <option key={year} value={year} className="bg-blue-800">
-              {year}年度 (BY)
-            </option>
-          ))}
-        </select>
-      </div>
-      
-      <div className="flex space-x-2">
-        <button
-          onClick={() => setCurrentPage('dashboard')}
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-center justify-between h-20">
+            <h1 className="text-3xl font-bold tracking-tight">酒母管理システム</h1>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCurrentPage('dashboard')}
                 className={`px-5 py-2.5 rounded-lg font-bold transition-all duration-200 ${
                   currentPage === 'dashboard'
                     ? 'bg-white text-blue-700 shadow-lg'
@@ -85,7 +70,7 @@ export default function App() {
                     : 'bg-blue-800 hover:bg-blue-700 text-blue-100'
                 }`}
               >
-                📊 タンク割り当て
+                🏺 タンク割り当て
               </button>
               <button
                 onClick={() => setCurrentPage('analysis-settings')}
@@ -95,7 +80,7 @@ export default function App() {
                     : 'bg-blue-800 hover:bg-blue-700 text-blue-100'
                 }`}
               >
-                📋 分析日設定
+                📈 分析設定
               </button>
               <button
                 onClick={() => setCurrentPage('csv-update')}
@@ -117,6 +102,18 @@ export default function App() {
               >
                 ⚙️ タンク設定
               </button>
+              {/* ← 追加ここから */}
+              <button
+                onClick={() => setCurrentPage('supabase-test')}
+                className={`px-5 py-2.5 rounded-lg font-bold transition-all duration-200 ${
+                  currentPage === 'supabase-test'
+                    ? 'bg-white text-blue-700 shadow-lg'
+                    : 'bg-blue-800 hover:bg-blue-700 text-blue-100'
+                }`}
+              >
+                🧪 Supabaseテスト
+              </button>
+              {/* ← 追加ここまで */}
             </div>
           </div>
         </div>
@@ -139,15 +136,19 @@ export default function App() {
             onBack={() => setCurrentPage('tank-assignment')}
           />
         )}
-         {currentPage === 'analysis-settings' && (
-  <AnalysisSettings 
-    onClose={() => setCurrentPage('dashboard')}
-    dataContext={dataContext}
-  />
-)}
-       {currentPage === 'csv-update' && (
-        <CSVUpdate dataContext={dataContext} onClose={() => setCurrentPage('dashboard')} />
-      )}
+        {currentPage === 'analysis-settings' && (
+          <AnalysisSettings 
+            onClose={() => setCurrentPage('dashboard')}
+            dataContext={dataContext}
+          />
+        )}
+        {currentPage === 'csv-update' && (
+          <CSVUpdate dataContext={dataContext} onClose={() => setCurrentPage('dashboard')} />
+        )}
+        {/* ← 追加 */}
+        {currentPage === 'supabase-test' && (
+          <SupabaseTest />
+        )}
       </main>
     </div>
   );
