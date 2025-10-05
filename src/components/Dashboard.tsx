@@ -5,7 +5,7 @@ import type {
   MergedShuboData
 } from '../utils/types';
 import { Fragment } from 'react';
-import { STORAGE_KEYS, createShuboKey } from '../utils/types';
+import { STORAGE_KEYS, createShuboKey, parseShuboKey, type ShuboKey } from '../utils/types';
 import ShuboDetailExpansion from './ShuboDetailExpansion';
 import { generateDailyRecords } from '../utils/dataUtils';
 
@@ -21,6 +21,7 @@ interface DashboardProps {
     dailyRecordsData: DailyRecordData[];
     getDailyRecords: (shuboNumber: number) => DailyRecordData[];
     updateDailyRecord: (record: DailyRecordData) => void;
+    currentFiscalYear: number;  // ← この1行を追加
   };
 }
 
@@ -52,6 +53,9 @@ export default function Dashboard({ dataContext }: DashboardProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [expandedShubo, setExpandedShubo] = useState<number | null>(null);
   
+  // ↓ これを追加
+  const { currentFiscalYear } = dataContext;
+  
   const [dailyEnvironment, setDailyEnvironment] = useState<DailyEnvironment>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.DAILY_ENVIRONMENT);
     return saved ? JSON.parse(saved) : {};
@@ -67,17 +71,43 @@ export default function Dashboard({ dataContext }: DashboardProps) {
     return saved ? JSON.parse(saved) : {};
   });
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.DAILY_ENVIRONMENT, JSON.stringify(dailyEnvironment));
-  }, [dailyEnvironment]);
+ useEffect(() => {
+  const savedBrewing = localStorage.getItem(STORAGE_KEYS.BREWING_PREPARATION);
+  const savedDischarge = localStorage.getItem(STORAGE_KEYS.DISCHARGE_SCHEDULE);
+  
+  setBrewingInput(savedBrewing ? JSON.parse(savedBrewing) : {});
+  setDischargeInput(savedDischarge ? JSON.parse(savedDischarge) : {});
+}, [currentFiscalYear]);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.BREWING_PREPARATION, JSON.stringify(brewingInput));
-  }, [brewingInput]);
+useEffect(() => {
+  const filteredData = Object.fromEntries(
+    Object.entries(brewingInput).filter(([key]) => {
+      const { fiscalYear } = parseShuboKey(key as ShuboKey);
+      return fiscalYear === currentFiscalYear;
+    })
+  );
+  
+  localStorage.setItem(
+    STORAGE_KEYS.BREWING_PREPARATION, 
+    JSON.stringify(filteredData)
+  );
+}, [brewingInput, currentFiscalYear]);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.DISCHARGE_SCHEDULE, JSON.stringify(dischargeInput));
-  }, [dischargeInput]);
+useEffect(() => {
+  const filteredData = Object.fromEntries(
+    Object.entries(dischargeInput).filter(([key]) => {
+      const parts = key.split('-');
+      if (parts.length < 2) return false;
+      const fiscalYear = parseInt(parts[1]);
+      return fiscalYear === currentFiscalYear;
+    })
+  );
+  
+  localStorage.setItem(
+    STORAGE_KEYS.DISCHARGE_SCHEDULE, 
+    JSON.stringify(filteredData)
+  );
+}, [dischargeInput, currentFiscalYear]);
 
   const getDateKey = (date: Date): string => {
     return date.toISOString().split('T')[0];
