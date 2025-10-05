@@ -11,7 +11,7 @@ type Page = 'dashboard' | 'tank-assignment' | 'tank-settings' | 'analysis-settin
 
 export default function App() {
   const dataContext = useData();
-  const [currentPage, setCurrentPage] = useState<Page>('supabase-test');  // ← 初期ページを変更
+const [currentPage, setCurrentPage] = useState<Page>('dashboard'); // ← 初期ページを変更
 
   // 読み込み中
   if (dataContext.isLoading) {
