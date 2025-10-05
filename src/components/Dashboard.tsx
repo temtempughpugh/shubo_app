@@ -744,7 +744,7 @@ const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
                         today.setHours(0, 0, 0, 0);
                         return date.getTime() === today.getTime();
                       });
-                      const inputKey = `${shubo.primaryNumber}-${dischargeIndex + 1}`;
+                      const inputKey = `${shubo.primaryNumber}-${shubo.fiscalYear}-${dischargeIndex + 1}`;
                       const input = dischargeInput[inputKey] || {
                         beforeDischargeKensyaku: null,
                         afterDischargeCapacity: null,
