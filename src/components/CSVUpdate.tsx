@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { parseShuboCSV, convertExcelDateToJs, generateDailyRecords, updateDualShuboDisplayNames } from '../utils/dataUtils';
 import type { ShuboRawData, CSVUpdateHistory, MergedShuboData, DailyRecordData } from '../utils/types';
 import { STORAGE_KEYS } from '../utils/types';
+import { createShuboKey, parseShuboKey, type ShuboKey } from '../utils/types';
 
 interface CSVUpdateProps {
   dataContext: {
@@ -21,10 +22,10 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
   const [updateDate, setUpdateDate] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<{
-    toUpdate: number[];
-    toKeep: number[];
-    notImported: number[];
-  } | null>(null);
+  toUpdate: ShuboKey[];
+  toKeep: ShuboKey[];
+  notImported: number[];
+} | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [history, setHistory] = useState<CSVUpdateHistory[]>(() => {
@@ -55,28 +56,30 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
       const updateDateObj = new Date(updateDate);
       updateDateObj.setHours(0, 0, 0, 0);
 
-      const toUpdate: number[] = [];
-      const toKeep: number[] = [];
+      const toUpdate: ShuboKey[] = [];
+const toKeep: ShuboKey[] = [];
 
-      dataContext.configuredShuboData.forEach(config => {
-        const startDate = new Date(config.shuboStartDate);
-        startDate.setHours(0, 0, 0, 0);
-        
-        if (startDate >= updateDateObj) {
-          toUpdate.push(config.shuboNumber);
-        } else {
-          toKeep.push(config.shuboNumber);
-        }
-      });
+dataContext.configuredShuboData.forEach(config => {
+  const startDate = new Date(config.shuboStartDate);
+  startDate.setHours(0, 0, 0, 0);
+  
+  const key = createShuboKey(config.shuboNumber, config.fiscalYear);
+  if (startDate >= updateDateObj) {
+    toUpdate.push(key);
+  } else {
+    toKeep.push(key);
+  }
+});
 
-      newShuboData.forEach(shubo => {
-        const startDate = convertExcelDateToJs(parseFloat(shubo.shuboStartDate));
-        startDate.setHours(0, 0, 0, 0);
-        
-        if (startDate >= updateDateObj && !toUpdate.includes(shubo.shuboNumber)) {
-          toUpdate.push(shubo.shuboNumber);
-        }
-      });
+newShuboData.forEach(shubo => {
+  const startDate = convertExcelDateToJs(parseFloat(shubo.shuboStartDate));
+  startDate.setHours(0, 0, 0, 0);
+  
+  const key = createShuboKey(shubo.shuboNumber, shubo.fiscalYear);
+  if (startDate >= updateDateObj && !toUpdate.includes(key)) {
+    toUpdate.push(key);
+  }
+});
 
       const newBeforeUpdateDate = newShuboData.filter(shubo => {
         const startDate = convertExcelDateToJs(parseFloat(shubo.shuboStartDate));
@@ -85,10 +88,19 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
       });
 
       setPreview({
-        toUpdate: toUpdate.sort((a, b) => a - b),
-        toKeep: toKeep.sort((a, b) => a - b),
-        notImported: newBeforeUpdateDate.map(s => s.shuboNumber).sort((a, b) => a - b)
-      });
+  toUpdate: toUpdate.sort((a, b) => {
+    const aNum = parseShuboKey(a).shuboNumber;
+    const bNum = parseShuboKey(b).shuboNumber;
+    return aNum - bNum;
+  }),
+  toKeep: toKeep.sort((a, b) => {
+    const aNum = parseShuboKey(a).shuboNumber;
+    const bNum = parseShuboKey(b).shuboNumber;
+    return aNum - bNum;
+  }),
+  notImported: newBeforeUpdateDate.map(s => s.shuboNumber).sort((a, b) => a - b)
+});
+
 
     } catch (error) {
       console.error('プレビューエラー:', error);
@@ -140,26 +152,29 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
 const currentConfigured = dataContext.configuredShuboData;
 
 // 更新日より前のデータは保持
-const keptConfigured = currentConfigured.filter(c => !preview.toUpdate.includes(c.shuboNumber));
+const keptConfigured = currentConfigured.filter(c => 
+  !preview.toUpdate.includes(createShuboKey(c.shuboNumber, c.fiscalYear))
+);
 
-// 更新対象のデータをマージ（既存の手動設定を保持）
-const updatedConfigured = preview.toUpdate.map(shuboNum => {
-  const existing = currentConfigured.find(c => c.shuboNumber === shuboNum);
-  const newRaw = newShuboData.find(s => s.shuboNumber === shuboNum);
+const updatedConfigured = preview.toUpdate.map(key => {
+  const { shuboNumber, fiscalYear } = parseShuboKey(key);
+  const existing = currentConfigured.find(c => 
+    c.shuboNumber === shuboNumber && c.fiscalYear === fiscalYear
+  );
+  const newRaw = newShuboData.find(s => 
+    s.shuboNumber === shuboNumber && s.fiscalYear === fiscalYear
+  );
   
   if (!newRaw) return null;
   
-  // 既存データがあれば手動設定を保持してCSV基本情報を更新
   if (existing) {
     return {
       ...existing,
-      // CSVから更新する項目
       shuboStartDate: convertExcelDateToJs(parseFloat(newRaw.shuboStartDate)),
       shuboEndDate: convertExcelDateToJs(parseFloat(newRaw.shuboEndDate)),
       shuboDays: newRaw.shuboDays,
       fiscalYear: newRaw.fiscalYear,
       originalData: newRaw,
-      // selectedTankId, shuboType, recipeData, tankData は保持
     };
   }
   
@@ -181,31 +196,33 @@ dataContext.setConfiguredShuboData(updatedWithDualInfo);
 const dailyRecords = JSON.parse(localStorage.getItem(STORAGE_KEYS.DAILY_RECORDS_DATA) || '[]');
 
 // 更新日より前のデータは保持
-const keptRecords = dailyRecords.filter((r: any) => !preview.toUpdate.includes(r.shuboNumber));
+const keptRecords = dailyRecords.filter((r: any) => 
+  !preview.toUpdate.includes(createShuboKey(r.shuboNumber, r.fiscalYear))
+);
 
-// 更新対象の日別記録を保持（日付が変わっても可能な限り保持）
-const updatedRecords = dailyRecords.filter((r: any) => preview.toUpdate.includes(r.shuboNumber)).map((record: any) => {
-  const newRaw = newShuboData.find(s => s.shuboNumber === record.shuboNumber);
+const updatedRecords = dailyRecords.filter((r: any) => 
+  preview.toUpdate.includes(createShuboKey(r.shuboNumber, r.fiscalYear))
+).map((record: any) => {
+  const newRaw = newShuboData.find(s => 
+    s.shuboNumber === record.shuboNumber && s.fiscalYear === record.fiscalYear
+  );
   if (!newRaw) return null;
   
   const newStartDate = convertExcelDateToJs(parseFloat(newRaw.shuboStartDate));
   const newEndDate = convertExcelDateToJs(parseFloat(newRaw.shuboEndDate));
   
-  // 記録日が新しい仕込み期間内に収まっているか確認
   const recordDate = new Date(record.recordDate);
   recordDate.setHours(0, 0, 0, 0);
   newStartDate.setHours(0, 0, 0, 0);
   newEndDate.setHours(0, 0, 0, 0);
   
   if (recordDate >= newStartDate && recordDate <= newEndDate) {
-    // 期間内なら保持（fiscalYearのみ更新）
     return {
       ...record,
       fiscalYear: newRaw.fiscalYear
     };
   }
   
-  // 期間外なら破棄
   return null;
 }).filter(Boolean);
 
@@ -217,11 +234,18 @@ localStorage.setItem(STORAGE_KEYS.DAILY_RECORDS_DATA, JSON.stringify(mergedRecor
       const dischargeData = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCHARGE_SCHEDULE) || '{}');
 
       // 更新対象の酒母のデータを削除
-      preview.toUpdate.forEach(shuboNum => {
-        delete brewingData[shuboNum];
-        delete dischargeData[shuboNum];
-      });
+      preview.toUpdate.forEach(key => {
+  delete brewingData[key];
+});
 
+// dischargeDataのクリーンアップ
+preview.toUpdate.forEach(key => {
+  Object.keys(dischargeData).forEach(dischargeKey => {
+    if (dischargeKey.startsWith(`${key}-`)) {
+      delete dischargeData[dischargeKey];
+    }
+  });
+});
       localStorage.setItem(STORAGE_KEYS.BREWING_PREPARATION, JSON.stringify(brewingData));
       localStorage.setItem(STORAGE_KEYS.DISCHARGE_SCHEDULE, JSON.stringify(dischargeData));
 
@@ -412,16 +436,22 @@ localStorage.setItem(STORAGE_KEYS.DAILY_RECORDS_DATA, JSON.stringify(mergedRecor
                     <div className="text-sm text-green-800 font-bold mb-2">更新対象</div>
                     <div className="text-3xl font-bold text-green-700 mb-2">{preview.toUpdate.length}件</div>
                     <div className="text-xs text-green-600 max-h-32 overflow-y-auto">
-                      {preview.toUpdate.map(n => `${n}号`).join(', ')}
-                    </div>
+  {preview.toUpdate.map(key => {
+    const { shuboNumber, fiscalYear } = parseShuboKey(key);
+    return `${shuboNumber}号(${fiscalYear}年度)`;
+  }).join(', ')}
+</div>
                   </div>
 
                   <div className="bg-blue-100 border border-blue-300 rounded-lg p-4">
                     <div className="text-sm text-blue-800 font-bold mb-2">保持対象</div>
                     <div className="text-3xl font-bold text-blue-700 mb-2">{preview.toKeep.length}件</div>
                     <div className="text-xs text-blue-600 max-h-32 overflow-y-auto">
-                      {preview.toKeep.map(n => `${n}号`).join(', ')}
-                    </div>
+  {preview.toKeep.map(key => {
+    const { shuboNumber, fiscalYear } = parseShuboKey(key);
+    return `${shuboNumber}号(${fiscalYear}年度)`;
+  }).join(', ')}
+</div>
                   </div>
 
                   <div className="bg-slate-100 border border-slate-300 rounded-lg p-4">
