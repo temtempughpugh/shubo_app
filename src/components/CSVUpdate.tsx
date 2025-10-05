@@ -212,6 +212,19 @@ const updatedRecords = dailyRecords.filter((r: any) => preview.toUpdate.includes
 const mergedRecords = [...keptRecords, ...updatedRecords];
 localStorage.setItem(STORAGE_KEYS.DAILY_RECORDS_DATA, JSON.stringify(mergedRecords));
 
+      // brewing_preparationとdischarge_scheduleのクリーンアップ
+      const brewingData = JSON.parse(localStorage.getItem(STORAGE_KEYS.BREWING_PREPARATION) || '{}');
+      const dischargeData = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCHARGE_SCHEDULE) || '{}');
+
+      // 更新対象の酒母のデータを削除
+      preview.toUpdate.forEach(shuboNum => {
+        delete brewingData[shuboNum];
+        delete dischargeData[shuboNum];
+      });
+
+      localStorage.setItem(STORAGE_KEYS.BREWING_PREPARATION, JSON.stringify(brewingData));
+      localStorage.setItem(STORAGE_KEYS.DISCHARGE_SCHEDULE, JSON.stringify(dischargeData));
+
       const newHistory: CSVUpdateHistory = {
         updateDate: new Date(updateDate),
         executedAt: new Date(),
