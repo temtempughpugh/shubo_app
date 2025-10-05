@@ -235,8 +235,6 @@ localStorage.setItem(STORAGE_KEYS.DAILY_RECORDS_DATA, JSON.stringify(mergedRecor
       localStorage.setItem(STORAGE_KEYS.CSV_UPDATE_HISTORY, JSON.stringify(updatedHistory));
       setHistory(updatedHistory);
 
-      await dataContext.reloadData();
-
       alert('CSV更新が完了しました');
       setPreview(null);
       setSelectedFile(null);

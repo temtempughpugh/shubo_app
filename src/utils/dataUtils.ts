@@ -344,7 +344,7 @@ export function checkDualShubo(shuboList: ShuboRawData[]): boolean[] {
   return isDualFlags;
 }
 
-// ConfiguredShuboDataから2個酛を判定（新バージョン）
+// ConfiguredShuboDataから2個酛を判定（年度対応版）
 export function checkDualShuboFromConfigured(
   configuredList: ConfiguredShuboData[]
 ): Map<number, { isDual: boolean; isPrimary: boolean; pairNumber: number | null }> {
@@ -354,35 +354,47 @@ export function checkDualShuboFromConfigured(
     dualMap.set(shubo.shuboNumber, { isDual: false, isPrimary: false, pairNumber: null });
   });
   
-  const sortedList = [...configuredList].sort((a, b) => a.shuboNumber - b.shuboNumber);
-  
-  for (let i = 0; i < sortedList.length - 1; i++) {
-    const current = sortedList[i];
-    const next = sortedList[i + 1];
-    
-    const isConsecutive = next.shuboNumber === current.shuboNumber + 1;
-    const sameTank = current.selectedTankId === next.selectedTankId;
-    const currentDate = current.shuboStartDate instanceof Date 
-      ? current.shuboStartDate 
-      : new Date(current.shuboStartDate);
-    const nextDate = next.shuboStartDate instanceof Date 
-      ? next.shuboStartDate 
-      : new Date(next.shuboStartDate);
-    const sameStartDate = currentDate.getTime() === nextDate.getTime();
-    
-    if (isConsecutive && sameTank && sameStartDate) {
-      dualMap.set(current.shuboNumber, { 
-        isDual: true, 
-        isPrimary: true, 
-        pairNumber: next.shuboNumber 
-      });
-      dualMap.set(next.shuboNumber, { 
-        isDual: true, 
-        isPrimary: false, 
-        pairNumber: current.shuboNumber 
-      });
+  // 年度でグループ化
+  const groupedByYear = new Map<number, ConfiguredShuboData[]>();
+  configuredList.forEach(shubo => {
+    if (!groupedByYear.has(shubo.fiscalYear)) {
+      groupedByYear.set(shubo.fiscalYear, []);
     }
-  }
+    groupedByYear.get(shubo.fiscalYear)!.push(shubo);
+  });
+  
+  // 各年度内で2個酛判定
+  groupedByYear.forEach((yearList) => {
+    const sortedList = [...yearList].sort((a, b) => a.shuboNumber - b.shuboNumber);
+    
+    for (let i = 0; i < sortedList.length - 1; i++) {
+      const current = sortedList[i];
+      const next = sortedList[i + 1];
+      
+      const isConsecutive = next.shuboNumber === current.shuboNumber + 1;
+      const sameTank = current.selectedTankId === next.selectedTankId;
+      const currentDate = current.shuboStartDate instanceof Date 
+        ? current.shuboStartDate 
+        : new Date(current.shuboStartDate);
+      const nextDate = next.shuboStartDate instanceof Date 
+        ? next.shuboStartDate 
+        : new Date(next.shuboStartDate);
+      const sameStartDate = currentDate.getTime() === nextDate.getTime();
+      
+      if (isConsecutive && sameTank && sameStartDate) {
+        dualMap.set(current.shuboNumber, { 
+          isDual: true, 
+          isPrimary: true, 
+          pairNumber: next.shuboNumber 
+        });
+        dualMap.set(next.shuboNumber, { 
+          isDual: true, 
+          isPrimary: false, 
+          pairNumber: current.shuboNumber 
+        });
+      }
+    }
+  });
   
   return dualMap;
 }

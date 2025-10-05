@@ -304,3 +304,17 @@ export const DEFAULT_ANALYSIS_SETTINGS: AnalysisSettings = {
     }
   }
 };
+
+// 複合キー型（順号-年度形式）
+export type ShuboKey = `${number}-${number}`;
+
+// 複合キーを生成するヘルパー関数
+export function createShuboKey(shuboNumber: number, fiscalYear: number): ShuboKey {
+  return `${shuboNumber}-${fiscalYear}`;
+}
+
+// 複合キーから順号と年度を取得するヘルパー関数
+export function parseShuboKey(key: ShuboKey): { shuboNumber: number; fiscalYear: number } {
+  const [shuboNumber, fiscalYear] = key.split('-').map(Number);
+  return { shuboNumber, fiscalYear };
+}

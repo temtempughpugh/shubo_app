@@ -253,43 +253,54 @@ const filteredShuboRawData = useMemo(() => {
   }
 
   function saveConfiguredShubo(data: ConfiguredShuboData) {
-    setConfiguredShuboData(current => {
-      const index = current.findIndex(item => item.shuboNumber === data.shuboNumber);
-      if (index >= 0) {
-        const updated = [...current];
-        updated[index] = data;
-        return updated;
-      } else {
-        return [...current, data];
-      }
-    });
-  }
-
-  function removeConfiguredShubo(shuboNumber: number) {
-    setConfiguredShuboData(current => 
-      current.filter(item => item.shuboNumber !== shuboNumber)
+  setConfiguredShuboData(current => {
+    const index = current.findIndex(item => 
+      item.shuboNumber === data.shuboNumber &&
+      item.fiscalYear === data.fiscalYear
     );
-  }
+    if (index >= 0) {
+      const updated = [...current];
+      updated[index] = data;
+      return updated;
+    } else {
+      return [...current, data];
+    }
+  });
+}
+
+  function removeConfiguredShubo(shuboNumber: number, fiscalYear: number) {
+  setConfiguredShuboData(current => 
+    current.filter(item => 
+      !(item.shuboNumber === shuboNumber && item.fiscalYear === fiscalYear)
+    )
+  );
+}
 
   function updateDailyRecord(record: DailyRecordData) {
-    setDailyRecordsData(current => {
-      const index = current.findIndex(item => 
-  item.shuboNumber === record.shuboNumber &&
-  item.dayNumber === record.dayNumber
-);
+  setDailyRecordsData(current => {
+    const index = current.findIndex(item => 
+      item.shuboNumber === record.shuboNumber &&
+      item.fiscalYear === record.fiscalYear &&
+      item.dayNumber === record.dayNumber
+    );
 
-      if (index >= 0) {
-        const updated = [...current];
-        updated[index] = record;
-        return updated;
-      } else {
-        return [...current, record];
-      }
-    });
-  }
+    if (index >= 0) {
+      const updated = [...current];
+      updated[index] = record;
+      return updated;
+    } else {
+      return [...current, record];
+    }
+  });
+}
 
-  function getDailyRecords(shuboNumber: number): DailyRecordData[] {
-  return filteredDailyRecordsData.filter(record => record.shuboNumber === shuboNumber);
+  function getDailyRecords(shuboNumber: number, fiscalYear?: number): DailyRecordData[] {
+  const targetYear = fiscalYear !== undefined ? fiscalYear : currentFiscalYear;
+  
+  return dailyRecordsData.filter(record => 
+    record.shuboNumber === shuboNumber && 
+    record.fiscalYear === targetYear
+  );
 }
 
   return {

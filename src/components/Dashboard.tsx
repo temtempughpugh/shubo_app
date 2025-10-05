@@ -5,9 +5,10 @@ import type {
   MergedShuboData
 } from '../utils/types';
 import { Fragment } from 'react';
-import { STORAGE_KEYS } from '../utils/types';
+import { STORAGE_KEYS, createShuboKey } from '../utils/types';
 import ShuboDetailExpansion from './ShuboDetailExpansion';
 import { generateDailyRecords } from '../utils/dataUtils';
+
 
 interface DashboardProps {
   dataContext: {
@@ -31,14 +32,14 @@ interface DailyEnvironment {
 }
 
 interface BrewingInput {
-  [shuboNumber: number]: {
+  [key: string]: {  // "shuboNumber-fiscalYear" 形式
     iceAmount: number | null;
     afterBrewingKensyaku: number | null;
   };
 }
 
 interface DischargeInput {
-  [key: string]: {
+  [key: string]: {  // "shuboNumber-fiscalYear-index" 形式
     beforeDischargeKensyaku: number | null;
     afterDischargeCapacity: number | null;
     destinationTank: string;
@@ -556,7 +557,8 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                           }
                         }
                         
-                        const input = brewingInput[shubo.primaryNumber] || { iceAmount: null };
+                        const brewingKey = createShuboKey(shubo.primaryNumber, shubo.fiscalYear);
+const input = brewingInput[brewingKey] || { iceAmount: null };
                         const preparationWater = input.iceAmount ? waterAmount - input.iceAmount : waterAmount;
                         const kensyaku = getKensyakuFromCapacity(shubo.selectedTankId, preparationWater);
 
@@ -569,13 +571,16 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                               <input 
                                 type="number" 
                                 value={input.iceAmount || ''} 
-                                onChange={(e) => setBrewingInput({
-                                  ...brewingInput,
-                                  [shubo.primaryNumber]: {
-                                    ...input,
-                                    iceAmount: e.target.value ? parseFloat(e.target.value) : null
-                                  }
-                                })}
+                                onChange={(e) => {
+  const brewingKey = createShuboKey(shubo.primaryNumber, shubo.fiscalYear);
+  setBrewingInput({
+    ...brewingInput,
+    [brewingKey]: {
+      ...brewingInput[brewingKey],
+      iceAmount: e.target.value ? parseFloat(e.target.value) : null
+    }
+  });
+}}
                                 placeholder="0" 
                                 className="w-14 px-1 py-1 text-xs border rounded" 
                               />
@@ -633,7 +638,8 @@ if (isDual) {
   measurementDisplay = `${expectedMeasurement}L (${primaryMeasurement}+${secondaryMeasurement})`;
 }
                         
-                        const input = brewingInput[shubo.primaryNumber] || { afterBrewingKensyaku: null };
+                        const brewingKey = createShuboKey(shubo.primaryNumber, shubo.fiscalYear);
+const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
                         const capacity = input.afterBrewingKensyaku 
                           ? getCapacityFromKensyaku(shubo.selectedTankId, input.afterBrewingKensyaku) 
                           : null;
@@ -672,13 +678,16 @@ if (isDual) {
                               <input 
                                 type="number" 
                                 value={input.afterBrewingKensyaku || ''} 
-                                onChange={(e) => setBrewingInput({
-                                  ...brewingInput,
-                                  [shubo.primaryNumber]: {
-                                    ...input,
-                                    afterBrewingKensyaku: e.target.value ? parseFloat(e.target.value) : null
-                                  }
-                                })}
+                                onChange={(e) => {
+  const brewingKey = createShuboKey(shubo.primaryNumber, shubo.fiscalYear);
+  setBrewingInput({
+    ...brewingInput,
+    [brewingKey]: {
+      ...brewingInput[brewingKey],
+      afterBrewingKensyaku: e.target.value ? parseFloat(e.target.value) : null
+    }
+  });
+}}
                                 placeholder="300" 
                                 className="w-14 px-1 py-1 text-xs border rounded" 
                               />
@@ -950,17 +959,17 @@ if (isDual) {
                           records={getShuboRecords(shubo)}
                           dailyEnvironment={dailyEnvironment}
                           onUpdateRecord={handleUpdateRecord}
-                          brewingInput={brewingInput[shubo.primaryNumber]}
-                          dischargeInput={
-                            shubo.shuboEndDates.map((_, index) => {
-                              const key = `${shubo.primaryNumber}-${index + 1}`;
-                              const input = dischargeInput[key];
-                              return input || {
-                                beforeDischargeKensyaku: null,
-                                afterDischargeCapacity: null
-                              };
-                            })
-                          }
+                          brewingInput={brewingInput[createShuboKey(shubo.primaryNumber, shubo.fiscalYear)]}
+dischargeInput={
+  shubo.shuboEndDates.map((_, index) => {
+    const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${index + 1}`;
+    const input = dischargeInput[key];
+    return input || {
+      beforeDischargeKensyaku: null,
+      afterDischargeCapacity: null
+    };
+  })
+}
                           getCapacityFromKensyaku={getCapacityFromKensyaku}
                         />
                       )}
