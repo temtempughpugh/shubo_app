@@ -19,9 +19,9 @@ interface DashboardProps {
     configuredShuboData: ConfiguredShuboData[];
     mergedShuboData: MergedShuboData[];
     dailyRecordsData: DailyRecordData[];
-    getDailyRecords: (shuboNumber: number) => DailyRecordData[];
+    getDailyRecords: (shuboNumber: number, fiscalYear?: number) => DailyRecordData[];
     updateDailyRecord: (record: DailyRecordData) => void;
-    currentFiscalYear: number;  // ← この1行を追加
+    currentFiscalYear: number;
   };
 }
 

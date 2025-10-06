@@ -9,9 +9,9 @@ interface CSVUpdateProps {
     shuboRawData: ShuboRawData[];
     setShuboRawData: (data: ShuboRawData[]) => void;
     configuredShuboData: any[];
-    setConfiguredShuboData: (data: any[]) => void;  // ← この行を追加
+    setConfiguredShuboData: (data: any[]) => void;
     mergedShuboData: MergedShuboData[];
-    getDailyRecords: (shuboNumber: number) => DailyRecordData[];
+    getDailyRecords: (shuboNumber: number, fiscalYear?: number) => DailyRecordData[];
     tankConversionMap: Map<string, any[]>;
     reloadData: () => Promise<void>;
   };
@@ -595,7 +595,7 @@ preview.toUpdate.forEach(key => {
 
 function generateShuboListHTML(
   shubos: MergedShuboData[], 
-  getDailyRecords: (shuboNumber: number) => DailyRecordData[],
+  getDailyRecords: (shuboNumber: number, fiscalYear?: number) => DailyRecordData[],
   brewingData: any,
   dischargeData: any,
   envData: any,
@@ -619,7 +619,7 @@ function generateShuboListHTML(
   };
 
   const shuboPages = shubos.map(shubo => {
-    let records = getDailyRecords(shubo.primaryNumber);
+    let records = getDailyRecords(shubo.primaryNumber, shubo.fiscalYear);
     
     if (records.length === 0) {
       records = generateDailyRecords(shubo);
