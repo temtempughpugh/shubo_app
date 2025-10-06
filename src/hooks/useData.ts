@@ -64,10 +64,10 @@ export function useData() {
     ])
 
     // データが空なら Supabase Storage からCSVインポート
-    const needsImport = 
-      shuboRawData.length === 0 || 
-      recipeRawData.length === 0 || 
-      tankConversionMap.size === 0
+  const needsImport = 
+  shuboRawData.length === 0 || 
+  recipeRawData.length === 0
+
 
     if (needsImport) {
       console.log('初回起動: Supabase StorageからCSVをインポートします')
@@ -85,8 +85,7 @@ export function useData() {
 // Supabase Storage からCSVインポート
 async function importFromSupabaseStorage() {
   try {
-    const { parseShuboCSV, parseRecipeCSV, parseTankConversionCSV } = await import('../utils/dataUtils')
-    const { RECOMMENDED_SHUBO_TANKS } = await import('../utils/types')
+    const { parseShuboCSV, parseRecipeCSV } = await import('../utils/dataUtils')
 
     // shubo.csv
     if (shuboRawData.length === 0) {
@@ -118,59 +117,29 @@ async function importFromSupabaseStorage() {
       }
     }
 
-    // tank_quick_reference.csv
-    if (tankConversionMap.size === 0) {
-      console.log('tank_quick_reference.csv を読み込み中...')
-      const { data: csvData } = await supabase.storage.from('csv-data').download('tank_quick_reference.csv')
-      if (csvData) {
-        const text = await csvData.text()
-        const lines = text.split('\n').filter(line => line.trim()).map(line => line.split(','))
-        const parsedMap = parseTankConversionCSV(lines)
-        
-        const allConversions: any[] = []
-        const uniqueKeys = new Set<string>()
-        
-        parsedMap.forEach((conversions) => {
-          conversions.forEach(conv => {
-            const key = `${conv.tankId}-${conv.kensyaku}`
-            if (!uniqueKeys.has(key)) {
-              uniqueKeys.add(key)
-              allConversions.push({
-                tank_id: conv.tankId,
-                kensyaku: conv.kensyaku,
-                capacity: conv.capacity
-              })
-            }
-          })
-        })
-        
-        if (allConversions.length > 0) {
-          const { error } = await supabase.from('tank_conversion_data').upsert(allConversions, { onConflict: 'tank_id,kensyaku' })
-          if (error) throw error
-          console.log(`✓ tank_quick_reference.csv: ${allConversions.length}件インポート完了`)
-        }
+    // タンク設定初期化（tankConversionMapは既にloadTankConversionで読み込まれている）
+if (tankConfigData.length === 0 && tankConversionMap.size > 0) {
+  const { RECOMMENDED_SHUBO_TANKS } = await import('../utils/types')
+  const tankConfigs: TankConfigData[] = []
+  tankConversionMap.forEach((conversions, tankId) => {
+    if (conversions.length === 0) return
+    const maxCapacityData = conversions.find(conv => conv.kensyaku === 0)
+    const maxCapacity = maxCapacityData?.capacity || 0
+    const isRecommended = RECOMMENDED_SHUBO_TANKS.includes(tankId as any)
+    tankConfigs.push({
+      tankId, displayName: `${tankId} (${maxCapacity}L)`, maxCapacity,
+      isEnabled: isRecommended, isRecommended, currentStatus: '空き', availableDate: null, memo: ''
+    })
+  })
 
-        const tankConfigs: TankConfigData[] = []
-        parsedMap.forEach((conversions, tankId) => {
-          if (conversions.length === 0) return
-          const maxCapacityData = conversions.find(conv => conv.kensyaku === 0)
-          const maxCapacity = maxCapacityData?.capacity || 0
-          const isRecommended = RECOMMENDED_SHUBO_TANKS.includes(tankId as any)
-          tankConfigs.push({
-            tankId, displayName: `${tankId} (${maxCapacity}L)`, maxCapacity,
-            isEnabled: isRecommended, isRecommended, currentStatus: '空き', availableDate: null, memo: ''
-          })
-        })
+  tankConfigs.sort((a, b) => b.maxCapacity - a.maxCapacity)
+  if (tankConfigs.length > 0) {
+    await saveTankConfig(tankConfigs)
+    console.log(`✓ タンク設定: ${tankConfigs.length}件初期化完了`)
+  }
+}
 
-        tankConfigs.sort((a, b) => b.maxCapacity - a.maxCapacity)
-        if (tankConfigs.length > 0) {
-          await saveTankConfig(tankConfigs)
-          console.log(`✓ タンク設定: ${tankConfigs.length}件初期化完了`)
-        }
-      }
-    }
-
-    await Promise.all([loadShuboRawData(), loadRecipeData(), loadTankConversion(), loadTankConfig()])
+await Promise.all([loadShuboRawData(), loadRecipeData(), loadTankConfig()])
     console.log('✓ 全CSVインポート完了')
 
   } catch (error) {
@@ -298,15 +267,12 @@ async function importFromSupabaseStorage() {
   }
 
   async function loadTankConversion() {
-    const { data, error } = await supabase.from('tank_conversion_data').select('*')
-    if (error) throw error
-    const map = new Map<string, TankConversionRawData[]>()
-    ;(data || []).forEach((r: any) => {
-      if (!map.has(r.tank_id)) map.set(r.tank_id, [])
-      map.get(r.tank_id)!.push({ tankId: r.tank_id, kensyaku: r.kensyaku, capacity: r.capacity })
-    })
-    setTankConversionMap(map)
-  }
+  const { loadCSV, parseTankConversionCSV } = await import('../utils/dataUtils')
+  const tankCSV = await loadCSV('/data/tank_quick_reference.csv')
+  const parsedMap = parseTankConversionCSV(tankCSV)
+  setTankConversionMap(parsedMap)
+}
+
 
   const availableFiscalYears = useMemo(() => {
     const years = new Set<number>()
@@ -367,7 +333,7 @@ async function importFromSupabaseStorage() {
   }
 
   return {
-  shuboRawData, 
+shuboRawData: shuboRawData.filter(s => s.fiscalYear === currentFiscalYear),  // ← 修正
   setShuboRawData: saveShuboRawData, 
   recipeRawData, 
   setRecipeRawData: saveRecipeData,
