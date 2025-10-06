@@ -83,9 +83,11 @@ export function useData() {
 }
 
 // Supabase Storage からCSVインポート
+// Supabase Storage からCSVインポート
+// Supabase Storage からCSVインポート
 async function importFromSupabaseStorage() {
   try {
-    const { parseShuboCSV, parseRecipeCSV } = await import('../utils/dataUtils')
+    const { parseShuboCSV, parseRecipeCSV, loadCSV, parseTankConversionCSV } = await import('../utils/dataUtils')
 
     // shubo.csv
     if (shuboRawData.length === 0) {
@@ -117,29 +119,45 @@ async function importFromSupabaseStorage() {
       }
     }
 
-    // タンク設定初期化（tankConversionMapは既にloadTankConversionで読み込まれている）
-if (tankConfigData.length === 0 && tankConversionMap.size > 0) {
-  const { RECOMMENDED_SHUBO_TANKS } = await import('../utils/types')
-  const tankConfigs: TankConfigData[] = []
-  tankConversionMap.forEach((conversions, tankId) => {
-    if (conversions.length === 0) return
-    const maxCapacityData = conversions.find(conv => conv.kensyaku === 0)
-    const maxCapacity = maxCapacityData?.capacity || 0
-    const isRecommended = RECOMMENDED_SHUBO_TANKS.includes(tankId as any)
-    tankConfigs.push({
-      tankId, displayName: `${tankId} (${maxCapacity}L)`, maxCapacity,
-      isEnabled: isRecommended, isRecommended, currentStatus: '空き', availableDate: null, memo: ''
-    })
-  })
+    // タンク設定初期化
+    if (tankConfigData.length === 0) {
+      console.log('タンク設定を初期化中...')
+      
+      // ローカルからタンク変換データを読み込み
+      const tankCSV = await loadCSV('/data/tank_quick_reference.csv')
+      const parsedMap = parseTankConversionCSV(tankCSV)
+      console.log(`タンク変換データ読み込み完了: ${parsedMap.size}タンク`)
+      
+      if (parsedMap.size > 0) {
+        const { RECOMMENDED_SHUBO_TANKS } = await import('../utils/types')
+        const tankConfigs: TankConfigData[] = []
+        
+        parsedMap.forEach((conversions, tankId) => {
+          if (conversions.length === 0) return
+          const maxCapacityData = conversions.find(conv => conv.kensyaku === 0)
+          const maxCapacity = maxCapacityData?.capacity || 0
+          const isRecommended = RECOMMENDED_SHUBO_TANKS.includes(tankId as any)
+          tankConfigs.push({
+            tankId, 
+            displayName: `${tankId} (${maxCapacity}L)`, 
+            maxCapacity,
+            isEnabled: isRecommended, 
+            isRecommended, 
+            currentStatus: '空き', 
+            availableDate: null, 
+            memo: ''
+          })
+        })
 
-  tankConfigs.sort((a, b) => b.maxCapacity - a.maxCapacity)
-  if (tankConfigs.length > 0) {
-    await saveTankConfig(tankConfigs)
-    console.log(`✓ タンク設定: ${tankConfigs.length}件初期化完了`)
-  }
-}
+        tankConfigs.sort((a, b) => b.maxCapacity - a.maxCapacity)
+        if (tankConfigs.length > 0) {
+          await saveTankConfig(tankConfigs)
+          console.log(`✓ タンク設定: ${tankConfigs.length}件初期化完了`)
+        }
+      }
+    }
 
-await Promise.all([loadShuboRawData(), loadRecipeData(), loadTankConfig()])
+    await Promise.all([loadShuboRawData(), loadRecipeData(), loadTankConfig()])
     console.log('✓ 全CSVインポート完了')
 
   } catch (error) {
