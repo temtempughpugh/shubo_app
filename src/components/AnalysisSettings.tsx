@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { STORAGE_KEYS, DEFAULT_ANALYSIS_SETTINGS, type AnalysisSettings, type RecipeRawData } from '../utils/types';
-import { loadCSV, parseRecipeCSV } from '../utils/dataUtils';
 
 interface AnalysisSettingsProps {
   onClose: () => void;
@@ -24,7 +23,17 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 // 仕込み配合データの読み込み
 useEffect(() => {
   const loadRecipeData = async () => {
-    // まずlocalStorageを確認
+    // 1. dataContext.recipeRawDataを最優先で確認
+    if (dataContext?.recipeRawData && dataContext.recipeRawData.length > 0) {
+      setRecipeData(dataContext.recipeRawData);
+      if (dataContext.recipeRawData.length > 0) {
+        setSelectedScale(dataContext.recipeRawData[0].recipeBrewingScale);
+        setSelectedType(dataContext.recipeRawData[0].shuboType);
+      }
+      return;
+    }
+
+    // 2. localStorageを確認
     const saved = localStorage.getItem('shubo_recipe_data');
     if (saved) {
       const parsed = JSON.parse(saved);
@@ -36,29 +45,12 @@ useEffect(() => {
       return;
     }
 
-    // localStorageになければCSVから読み込み
-    try {
-      const csvData = await loadCSV('/data/shubo_sikomi.csv');
-      const recipes = parseRecipeCSV(csvData);
-      
-      console.log('読み込んだレシピデータ:', recipes);
-      
-      setRecipeData(recipes);
-      
-      // localStorageに保存
-      localStorage.setItem('shubo_recipe_data', JSON.stringify(recipes));
-      
-      if (recipes.length > 0) {
-        setSelectedScale(recipes[0].recipeBrewingScale);
-        setSelectedType(recipes[0].shuboType);
-      }
-    } catch (error) {
-      console.error('仕込み配合データ読み込みエラー:', error);
-    }
+    // 3. どちらもなければエラー表示（CSVファイルは配置していないので読み込まない）
+    console.warn('仕込み配合データが見つかりません');
   };
   
   loadRecipeData();
-}, []);
+}, [dataContext?.recipeRawData]);
 
 const handleSaveChanges = async () => {
   // 1. localStorageを更新
