@@ -5,9 +5,8 @@ import TankSettings from './components/TankSettings';
 import { useData } from './hooks/useData';
 import CSVUpdate from './components/CSVUpdate';
 import AnalysisSettings from './components/AnalysisSettings';
-import SupabaseTest from './components/SupabaseTest';  // ← 追加
 
-type Page = 'dashboard' | 'tank-assignment' | 'tank-settings' | 'analysis-settings' | 'csv-update' | 'supabase-test';  // ← 'supabase-test' 追加
+type Page = 'dashboard' | 'tank-assignment' | 'tank-settings' | 'analysis-settings' | 'csv-update';
 
 export default function App() {
   const dataContext = useData();
@@ -45,22 +44,36 @@ const [currentPage, setCurrentPage] = useState<Page>('dashboard'); // ← 初期
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* ナビゲーションバー */}
-      <nav className="bg-gradient-to-r from-blue-700 to-blue-900 text-white shadow-xl">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center justify-between h-20">
-            <h1 className="text-3xl font-bold tracking-tight">酒母管理システム</h1>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setCurrentPage('dashboard')}
-                className={`px-5 py-2.5 rounded-lg font-bold transition-all duration-200 ${
-                  currentPage === 'dashboard'
-                    ? 'bg-white text-blue-700 shadow-lg'
-                    : 'bg-blue-800 hover:bg-blue-700 text-blue-100'
-                }`}
-              >
-                📊 ダッシュボード
+  <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    {/* ナビゲーションバー */}
+    <nav className="bg-gradient-to-r from-blue-700 to-blue-900 text-white shadow-xl">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-center justify-between h-20">
+          <h1 className="text-3xl font-bold tracking-tight">酒母管理システム</h1>
+          
+          {/* ← ここに年度選択を追加 */}
+          <div className="flex items-center gap-3">
+            <select
+              value={dataContext.currentFiscalYear}
+              onChange={(e) => dataContext.setCurrentFiscalYear(Number(e.target.value))}
+              className="px-4 py-2 bg-blue-800 border-2 border-blue-600 rounded-lg font-bold text-white focus:outline-none focus:ring-2 focus:ring-white"
+            >
+              {dataContext.availableFiscalYears.map(year => (
+                <option key={year} value={year}>{year}年度</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex gap-3">
+            <button
+              onClick={() => setCurrentPage('dashboard')}
+              className={`px-5 py-2.5 rounded-lg font-bold transition-all duration-200 ${
+                currentPage === 'dashboard'
+                  ? 'bg-white text-blue-700 shadow-lg'
+                  : 'bg-blue-800 hover:bg-blue-700 text-blue-100'
+              }`}
+            >
+              📊 ダッシュボード
               </button>
               <button
                 onClick={() => setCurrentPage('tank-assignment')}
@@ -102,18 +115,7 @@ const [currentPage, setCurrentPage] = useState<Page>('dashboard'); // ← 初期
               >
                 ⚙️ タンク設定
               </button>
-              {/* ← 追加ここから */}
-              <button
-                onClick={() => setCurrentPage('supabase-test')}
-                className={`px-5 py-2.5 rounded-lg font-bold transition-all duration-200 ${
-                  currentPage === 'supabase-test'
-                    ? 'bg-white text-blue-700 shadow-lg'
-                    : 'bg-blue-800 hover:bg-blue-700 text-blue-100'
-                }`}
-              >
-                🧪 Supabaseテスト
-              </button>
-              {/* ← 追加ここまで */}
+              
             </div>
           </div>
         </div>
@@ -144,10 +146,6 @@ const [currentPage, setCurrentPage] = useState<Page>('dashboard'); // ← 初期
         )}
         {currentPage === 'csv-update' && (
           <CSVUpdate dataContext={dataContext} onClose={() => setCurrentPage('dashboard')} />
-        )}
-        {/* ← 追加 */}
-        {currentPage === 'supabase-test' && (
-          <SupabaseTest />
         )}
       </main>
     </div>
