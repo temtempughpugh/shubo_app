@@ -464,7 +464,7 @@ useEffect(() => {
                       const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
 
                       return (
-                        <tr key={shubo.primaryNumber} className="border-b hover:bg-slate-50">
+                        <tr key={`${shubo.primaryNumber}-${shubo.fiscalYear}`} className="border-b hover:bg-slate-50">
                           <td className="px-2 py-2 text-center">
                             {record?.isAnalysisDay ? (
                               <span className="text-blue-600 font-bold text-lg">○</span>
@@ -593,7 +593,7 @@ const input = brewingInput[brewingKey] || { iceAmount: null };
                         const kensyaku = getKensyakuFromCapacity(shubo.selectedTankId, preparationWater);
 
                         return (
-                          <tr key={shubo.primaryNumber} className="border-b hover:bg-slate-50">
+                          <tr key={`${shubo.primaryNumber}-${shubo.fiscalYear}`} className="border-b hover:bg-slate-50">
                             <td className="px-2 py-2 font-bold text-blue-700 text-xs">{shubo.displayName}</td>
                             <td className="px-2 py-2 text-xs">{shubo.selectedTankId}</td>
                             <td className="px-2 py-2 text-xs">{waterDisplay}</td>
@@ -678,7 +678,7 @@ const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
                           : null;
 
                         return (
-                          <tr key={shubo.primaryNumber} className="border-b hover:bg-slate-50">
+                          <tr key={`${shubo.primaryNumber}-${shubo.fiscalYear}`} className="border-b hover:bg-slate-50">
                             <td className="px-2 py-2 font-bold text-blue-700 text-xs">{shubo.displayName}</td>
                             <td className="px-2 py-2 text-xs">{shubo.selectedTankId}</td>
                             <td className="px-2 py-2">
@@ -822,7 +822,7 @@ const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
                         : null;
 
                       return (
-                        <tr key={shubo.primaryNumber} className="border-b hover:bg-slate-50">
+                        <tr key={`${shubo.primaryNumber}-${shubo.fiscalYear}`} className="border-b hover:bg-slate-50">
                           <td className="px-3 py-2 font-bold text-blue-700">{shubo.displayName}</td>
                           <td className="px-3 py-2">{shubo.selectedTankId}</td>
                           <td className="px-3 py-2">
