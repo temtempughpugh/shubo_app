@@ -1,14 +1,13 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import type {
   ConfiguredShuboData,
   DailyRecordData,
   MergedShuboData
 } from '../utils/types';
 import { Fragment } from 'react';
-import { STORAGE_KEYS, createShuboKey, parseShuboKey, type ShuboKey } from '../utils/types';
+import { STORAGE_KEYS, createShuboKey } from '../utils/types';
 import ShuboDetailExpansion from './ShuboDetailExpansion';
 import { generateDailyRecords } from '../utils/dataUtils';
-
 
 interface DashboardProps {
   dataContext: {
@@ -22,6 +21,12 @@ interface DashboardProps {
     getDailyRecords: (shuboNumber: number, fiscalYear?: number) => DailyRecordData[];
     updateDailyRecord: (record: DailyRecordData) => void;
     currentFiscalYear: number;
+    dailyEnvironment: Record<string, { temperature: string; humidity: string }>;
+    brewingPreparation: Record<string, any>;
+    dischargeSchedule: Record<string, any>;
+    saveDailyEnvironment: (dateKey: string, temperature: string, humidity: string) => Promise<void>;
+    saveBrewingPreparation: (shuboNumber: number, fiscalYear: number, data: any) => Promise<void>;
+    saveDischargeSchedule: (shuboNumber: number, fiscalYear: number, index: number, data: any) => Promise<void>;
   };
 }
 
@@ -32,82 +37,27 @@ interface DailyEnvironment {
   };
 }
 
-interface BrewingInput {
-  [key: string]: {  // "shuboNumber-fiscalYear" 形式
-    iceAmount: number | null;
-    afterBrewingKensyaku: number | null;
-  };
-}
-
-interface DischargeInput {
-  [key: string]: {  // "shuboNumber-fiscalYear-index" 形式
-    beforeDischargeKensyaku: number | null;
-    afterDischargeCapacity: number | null;
-    destinationTank: string;
-    iceAmount: number | null;
-  };
-}
-
 export default function Dashboard({ dataContext }: DashboardProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [expandedShubo, setExpandedShubo] = useState<number | null>(null);
-  
-  // ↓ これを追加
-  const { currentFiscalYear } = dataContext;
   
   const [dailyEnvironment, setDailyEnvironment] = useState<DailyEnvironment>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.DAILY_ENVIRONMENT);
     return saved ? JSON.parse(saved) : {};
   });
 
-  const [brewingInput, setBrewingInput] = useState<BrewingInput>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.BREWING_PREPARATION);
-    return saved ? JSON.parse(saved) : {};
-  });
+  const brewingInput = dataContext.brewingPreparation || {};
+  const dischargeInput = dataContext.dischargeSchedule || {};
 
-  const [dischargeInput, setDischargeInput] = useState<DischargeInput>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.DISCHARGE_SCHEDULE);
-    return saved ? JSON.parse(saved) : {};
-  });
+  const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial<DailyRecordData>>>(new Map());
+  const [localBrewingUpdates, setLocalBrewingUpdates] = useState<Map<string, any>>(new Map());
+  const [localDischargeUpdates, setLocalDischargeUpdates] = useState<Map<string, any>>(new Map());
+  const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
- useEffect(() => {
-  const savedBrewing = localStorage.getItem(STORAGE_KEYS.BREWING_PREPARATION);
-  const savedDischarge = localStorage.getItem(STORAGE_KEYS.DISCHARGE_SCHEDULE);
-  
-  setBrewingInput(savedBrewing ? JSON.parse(savedBrewing) : {});
-  setDischargeInput(savedDischarge ? JSON.parse(savedDischarge) : {});
-}, [currentFiscalYear]);
-
-useEffect(() => {
-  const filteredData = Object.fromEntries(
-    Object.entries(brewingInput).filter(([key]) => {
-      const { fiscalYear } = parseShuboKey(key as ShuboKey);
-      return fiscalYear === currentFiscalYear;
-    })
-  );
-  
-  localStorage.setItem(
-    STORAGE_KEYS.BREWING_PREPARATION, 
-    JSON.stringify(filteredData)
-  );
-}, [brewingInput, currentFiscalYear]);
-
-useEffect(() => {
-  const filteredData = Object.fromEntries(
-    Object.entries(dischargeInput).filter(([key]) => {
-      const parts = key.split('-');
-      if (parts.length < 2) return false;
-      const fiscalYear = parseInt(parts[1]);
-      return fiscalYear === currentFiscalYear;
-    })
-  );
-  
-  localStorage.setItem(
-    STORAGE_KEYS.DISCHARGE_SCHEDULE, 
-    JSON.stringify(filteredData)
-  );
-}, [dischargeInput, currentFiscalYear]);
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.DAILY_ENVIRONMENT, JSON.stringify(dailyEnvironment));
+  }, [dailyEnvironment]);
 
   const getDateKey = (date: Date): string => {
     return date.toISOString().split('T')[0];
@@ -192,13 +142,11 @@ useEffect(() => {
       return existing;
     }
     
-    // レコードが存在しない場合は生成
     const records = generateDailyRecords(shubo);
     records.forEach(record => {
       dataContext.updateDailyRecord(record);
     });
     
-    // 生成後に再取得
     return dataContext.getDailyRecords(shubo.primaryNumber);
   };
 
@@ -206,32 +154,195 @@ useEffect(() => {
     dataContext.updateDailyRecord(record);
   };
 
-  // DailyRecordDataから本日の分析データを取得
   const getTodayAnalysisRecord = (shuboNumber: number, dayNumber: number): DailyRecordData | null => {
     const records = dataContext.getDailyRecords(shuboNumber);
     return records.find(r => r.dayNumber === dayNumber) || null;
   };
 
-  // DailyRecordDataから1日目のデータを取得（仕込み予定用）
   const getDay1Record = (shuboNumber: number): DailyRecordData | null => {
     const records = dataContext.getDailyRecords(shuboNumber);
     return records.find(r => r.dayNumber === 1) || null;
   };
 
-  // 分析予定のデータを更新
   const updateAnalysisRecord = (shuboNumber: number, dayNumber: number, updates: Partial<DailyRecordData>) => {
     const record = getTodayAnalysisRecord(shuboNumber, dayNumber);
-    if (record) {
-      dataContext.updateDailyRecord({ ...record, ...updates });
-    }
+    if (!record) return;
+
+    const key = `analysis-${shuboNumber}-${record.fiscalYear}-${dayNumber}`;
+    
+    setLocalRecordUpdates(prev => {
+      const newMap = new Map(prev);
+      const existing = prev.get(key) || {};
+      newMap.set(key, { ...existing, ...updates });
+      return newMap;
+    });
+
+    const existingTimer = debounceTimers.current.get(key);
+    if (existingTimer) clearTimeout(existingTimer);
+
+    const newTimer = setTimeout(() => {
+      const mergedUpdates = localRecordUpdates.get(key) || {};
+      dataContext.updateDailyRecord({ ...record, ...mergedUpdates, ...updates });
+      
+      setLocalRecordUpdates(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(key);
+        return newMap;
+      });
+      debounceTimers.current.delete(key);
+    }, 500);
+
+    debounceTimers.current.set(key, newTimer);
   };
 
-  // 仕込み予定のデータを更新（1日目）
   const updateBrewingRecord = (shuboNumber: number, updates: Partial<DailyRecordData>) => {
     const record = getDay1Record(shuboNumber);
-    if (record) {
-      dataContext.updateDailyRecord({ ...record, ...updates });
+    if (!record) return;
+
+    const key = `brewing-${shuboNumber}-${record.fiscalYear}-1`;
+    
+    setLocalRecordUpdates(prev => {
+      const newMap = new Map(prev);
+      const existing = prev.get(key) || {};
+      newMap.set(key, { ...existing, ...updates });
+      return newMap;
+    });
+
+    const existingTimer = debounceTimers.current.get(key);
+    if (existingTimer) clearTimeout(existingTimer);
+
+    const newTimer = setTimeout(() => {
+      const mergedUpdates = localRecordUpdates.get(key) || {};
+      dataContext.updateDailyRecord({ ...record, ...mergedUpdates, ...updates });
+      
+      setLocalRecordUpdates(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(key);
+        return newMap;
+      });
+      debounceTimers.current.delete(key);
+    }, 500);
+
+    debounceTimers.current.set(key, newTimer);
+  };
+
+  const getDisplayRecordValue = (shuboNumber: number, dayNumber: number, field: keyof DailyRecordData): string | number => {
+    const record = dayNumber === 1 ? getDay1Record(shuboNumber) : getTodayAnalysisRecord(shuboNumber, dayNumber);
+    if (!record) return '';
+    
+    const key = dayNumber === 1 ? `brewing-${shuboNumber}-${record.fiscalYear}-1` : `analysis-${shuboNumber}-${record.fiscalYear}-${dayNumber}`;
+    const localUpdate = localRecordUpdates.get(key);
+    
+    if (localUpdate && field in localUpdate) {
+      const value = localUpdate[field];
+      if (typeof value === 'string' || typeof value === 'number') {
+        return value ?? '';
+      }
+      return '';
     }
+    
+    const value = record[field];
+    if (typeof value === 'string' || typeof value === 'number') {
+      return value ?? '';
+    }
+    return '';
+  };
+
+  const getDisplayBrewingValue = (shuboNumber: number, fiscalYear: number, field: 'iceAmount' | 'afterBrewingKensyaku'): string | number => {
+    const key = `${shuboNumber}-${fiscalYear}`;
+    const localUpdate = localBrewingUpdates.get(key);
+    
+    if (localUpdate && field in localUpdate) {
+      return localUpdate[field] ?? '';
+    }
+    
+    return brewingInput[key]?.[field] ?? '';
+  };
+
+  const getDisplayDischargeValue = (shuboNumber: number, fiscalYear: number, index: number, field: string): string | number => {
+    const key = `${shuboNumber}-${fiscalYear}-${index}`;
+    const localUpdate = localDischargeUpdates.get(key);
+    
+    if (localUpdate && field in localUpdate) {
+      return localUpdate[field] ?? '';
+    }
+    
+    return dischargeInput[key]?.[field] ?? '';
+  };
+
+  const updateBrewingInput = async (shuboNumber: number, fiscalYear: number, field: 'iceAmount' | 'afterBrewingKensyaku', value: number | null) => {
+    const key = `${shuboNumber}-${fiscalYear}`;
+    
+    setLocalBrewingUpdates(prev => {
+      const newMap = new Map(prev);
+      const existing = prev.get(key) || {};
+      newMap.set(key, { ...existing, [field]: value });
+      return newMap;
+    });
+
+    const timerKey = `brewing-prep-${key}`;
+    const existingTimer = debounceTimers.current.get(timerKey);
+    if (existingTimer) clearTimeout(existingTimer);
+
+    const newTimer = setTimeout(async () => {
+      const mergedUpdates = localBrewingUpdates.get(key) || {};
+      await dataContext.saveBrewingPreparation(
+        shuboNumber,
+        fiscalYear,
+        {
+          ...brewingInput[key],
+          ...mergedUpdates,
+          [field]: value
+        }
+      );
+      
+      setLocalBrewingUpdates(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(key);
+        return newMap;
+      });
+      debounceTimers.current.delete(timerKey);
+    }, 500);
+
+    debounceTimers.current.set(timerKey, newTimer);
+  };
+
+  const updateDischargeInput = async (shuboNumber: number, fiscalYear: number, index: number, field: string, value: any) => {
+    const key = `${shuboNumber}-${fiscalYear}-${index}`;
+    
+    setLocalDischargeUpdates(prev => {
+      const newMap = new Map(prev);
+      const existing = prev.get(key) || {};
+      newMap.set(key, { ...existing, [field]: value });
+      return newMap;
+    });
+
+    const timerKey = `discharge-${key}`;
+    const existingTimer = debounceTimers.current.get(timerKey);
+    if (existingTimer) clearTimeout(existingTimer);
+
+    const newTimer = setTimeout(async () => {
+      const mergedUpdates = localDischargeUpdates.get(key) || {};
+      await dataContext.saveDischargeSchedule(
+        shuboNumber,
+        fiscalYear,
+        index,
+        {
+          ...dischargeInput[key],
+          ...mergedUpdates,
+          [field]: value
+        }
+      );
+      
+      setLocalDischargeUpdates(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(key);
+        return newMap;
+      });
+      debounceTimers.current.delete(timerKey);
+    }, 500);
+
+    debounceTimers.current.set(timerKey, newTimer);
   };
 
   const todayWorks = useMemo(() => {
@@ -476,7 +587,7 @@ useEffect(() => {
                             <input 
                               type="number" 
                               step="0.1" 
-                              value={record?.temperature1 ?? ''} 
+                              value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'temperature1')} 
                               onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
                                 temperature1: e.target.value ? parseFloat(e.target.value) : null
                               })}
@@ -488,7 +599,7 @@ useEffect(() => {
                             <input 
                               type="number" 
                               step="0.1" 
-                              value={record?.baume ?? ''} 
+                              value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'baume')} 
                               onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
                                 baume: e.target.value ? parseFloat(e.target.value) : null
                               })}
@@ -500,7 +611,7 @@ useEffect(() => {
                             <input 
                               type="number" 
                               step="0.1" 
-                              value={record?.acidity ?? ''} 
+                              value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'acidity')} 
                               onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
                                 acidity: e.target.value ? parseFloat(e.target.value) : null
                               })}
@@ -512,7 +623,7 @@ useEffect(() => {
                             <input 
                               type="number" 
                               step="0.1" 
-                              value={record?.temperature2 ?? ''} 
+                              value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'temperature2')} 
                               onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
                                 temperature2: e.target.value ? parseFloat(e.target.value) : null
                               })}
@@ -523,7 +634,7 @@ useEffect(() => {
                           <td className="px-2 py-2">
                             <input 
                               type="text" 
-                              value={record?.memo ?? ''} 
+                              value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'memo')} 
                               onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
                                 memo: e.target.value
                               })}
@@ -587,9 +698,8 @@ useEffect(() => {
                           }
                         }
                         
-                        const brewingKey = createShuboKey(shubo.primaryNumber, shubo.fiscalYear);
-const input = brewingInput[brewingKey] || { iceAmount: null };
-                        const preparationWater = input.iceAmount ? waterAmount - input.iceAmount : waterAmount;
+                        const iceAmount = getDisplayBrewingValue(shubo.primaryNumber, shubo.fiscalYear, 'iceAmount');
+                        const preparationWater = iceAmount ? waterAmount - Number(iceAmount) : waterAmount;
                         const kensyaku = getKensyakuFromCapacity(shubo.selectedTankId, preparationWater);
 
                         return (
@@ -600,23 +710,19 @@ const input = brewingInput[brewingKey] || { iceAmount: null };
                             <td className="px-2 py-2">
                               <input 
                                 type="number" 
-                                value={input.iceAmount || ''} 
-                                onChange={(e) => {
-  const brewingKey = createShuboKey(shubo.primaryNumber, shubo.fiscalYear);
-  setBrewingInput({
-    ...brewingInput,
-    [brewingKey]: {
-      ...brewingInput[brewingKey],
-      iceAmount: e.target.value ? parseFloat(e.target.value) : null
-    }
-  });
-}}
+                                value={iceAmount} 
+                                onChange={(e) => updateBrewingInput(
+                                  shubo.primaryNumber,
+                                  shubo.fiscalYear,
+                                  'iceAmount',
+                                  e.target.value ? parseFloat(e.target.value) : null
+                                )}
                                 placeholder="0" 
                                 className="w-14 px-1 py-1 text-xs border rounded" 
                               />
                             </td>
                             <td className="px-2 py-2 text-green-700 font-bold text-xs">
-                              {input.iceAmount ? `${preparationWater}L` : '-'}
+                              {iceAmount ? `${preparationWater}L` : '-'}
                             </td>
                             <td className="px-2 py-2 text-slate-700 text-xs">
                               {kensyaku !== null ? `${kensyaku}mm` : '-'}
@@ -658,20 +764,18 @@ const input = brewingInput[brewingKey] || { iceAmount: null };
                       {todayWorks.brewingSchedules.map(shubo => {
                         const isDual = shubo.primaryNumber !== shubo.secondaryNumber;
                         const expectedMeasurement = shubo.recipeData.measurement;
-const record = getDay1Record(shubo.primaryNumber);
 
-let measurementDisplay = `${expectedMeasurement}L`;
+                        let measurementDisplay = `${expectedMeasurement}L`;
 
-if (isDual) {
-  const primaryMeasurement = shubo.individualRecipeData[0].measurement;
-  const secondaryMeasurement = shubo.individualRecipeData[1].measurement;
-  measurementDisplay = `${expectedMeasurement}L (${primaryMeasurement}+${secondaryMeasurement})`;
-}
+                        if (isDual) {
+                          const primaryMeasurement = shubo.individualRecipeData[0].measurement;
+                          const secondaryMeasurement = shubo.individualRecipeData[1].measurement;
+                          measurementDisplay = `${expectedMeasurement}L (${primaryMeasurement}+${secondaryMeasurement})`;
+                        }
                         
-                        const brewingKey = createShuboKey(shubo.primaryNumber, shubo.fiscalYear);
-const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
-                        const capacity = input.afterBrewingKensyaku 
-                          ? getCapacityFromKensyaku(shubo.selectedTankId, input.afterBrewingKensyaku) 
+                        const afterBrewingKensyaku = getDisplayBrewingValue(shubo.primaryNumber, shubo.fiscalYear, 'afterBrewingKensyaku');
+                        const capacity = afterBrewingKensyaku 
+                          ? getCapacityFromKensyaku(shubo.selectedTankId, Number(afterBrewingKensyaku)) 
                           : null;
                         const ratio = capacity && expectedMeasurement 
                           ? ((capacity / expectedMeasurement) * 100).toFixed(1) 
@@ -684,7 +788,7 @@ const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
                             <td className="px-2 py-2">
                               <input 
                                 type="number" 
-                                value={record?.temperature1 ?? ''} 
+                                value={getDisplayRecordValue(shubo.primaryNumber, 1, 'temperature1')} 
                                 onChange={(e) => updateBrewingRecord(shubo.primaryNumber, {
                                   temperature1: e.target.value ? parseFloat(e.target.value) : null
                                 })}
@@ -695,7 +799,7 @@ const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
                             <td className="px-2 py-2">
                               <input 
                                 type="number" 
-                                value={record?.temperature2 ?? ''} 
+                                value={getDisplayRecordValue(shubo.primaryNumber, 1, 'temperature2')} 
                                 onChange={(e) => updateBrewingRecord(shubo.primaryNumber, {
                                   temperature2: e.target.value ? parseFloat(e.target.value) : null
                                 })}
@@ -707,17 +811,13 @@ const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
                             <td className="px-2 py-2">
                               <input 
                                 type="number" 
-                                value={input.afterBrewingKensyaku || ''} 
-                                onChange={(e) => {
-  const brewingKey = createShuboKey(shubo.primaryNumber, shubo.fiscalYear);
-  setBrewingInput({
-    ...brewingInput,
-    [brewingKey]: {
-      ...brewingInput[brewingKey],
-      afterBrewingKensyaku: e.target.value ? parseFloat(e.target.value) : null
-    }
-  });
-}}
+                                value={afterBrewingKensyaku} 
+                                onChange={(e) => updateBrewingInput(
+                                  shubo.primaryNumber,
+                                  shubo.fiscalYear,
+                                  'afterBrewingKensyaku',
+                                  e.target.value ? parseFloat(e.target.value) : null
+                                )}
                                 placeholder="300" 
                                 className="w-14 px-1 py-1 text-xs border rounded" 
                               />
@@ -774,17 +874,16 @@ const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
                         today.setHours(0, 0, 0, 0);
                         return date.getTime() === today.getTime();
                       });
-                      const inputKey = `${shubo.primaryNumber}-${shubo.fiscalYear}-${dischargeIndex + 1}`;
-                      const input = dischargeInput[inputKey] || {
-                        beforeDischargeKensyaku: null,
-                        afterDischargeCapacity: null,
-                        destinationTank: '',
-                        iceAmount: null
-                      };
-                      const beforeCapacity = input.beforeDischargeKensyaku 
-                        ? getCapacityFromKensyaku(shubo.selectedTankId, input.beforeDischargeKensyaku) 
+                      
+                      const beforeDischargeKensyaku = getDisplayDischargeValue(shubo.primaryNumber, shubo.fiscalYear, dischargeIndex + 1, 'beforeDischargeKensyaku');
+                      const afterDischargeCapacity = getDisplayDischargeValue(shubo.primaryNumber, shubo.fiscalYear, dischargeIndex + 1, 'afterDischargeCapacity');
+                      const destinationTank = getDisplayDischargeValue(shubo.primaryNumber, shubo.fiscalYear, dischargeIndex + 1, 'destinationTank');
+                      const iceAmount = getDisplayDischargeValue(shubo.primaryNumber, shubo.fiscalYear, dischargeIndex + 1, 'iceAmount');
+
+                      const beforeCapacity = beforeDischargeKensyaku 
+                        ? getCapacityFromKensyaku(shubo.selectedTankId, Number(beforeDischargeKensyaku)) 
                         : null;
-                      const afterCapacity = input.afterDischargeCapacity !== null ? input.afterDischargeCapacity : null;
+                      const afterCapacity = afterDischargeCapacity !== null && afterDischargeCapacity !== '' ? Number(afterDischargeCapacity) : null;
                       const afterKensyaku = afterCapacity !== null && afterCapacity >= 0
                         ? getKensyakuFromCapacity(shubo.selectedTankId, afterCapacity)
                         : null;
@@ -792,19 +891,16 @@ const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
                         ? beforeCapacity - afterCapacity 
                         : null;
 
-                      // 仕込み配合から初添_汲み水を取得（2個酛対応）
                       const isDual = shubo.primaryNumber !== shubo.secondaryNumber;
                       let soeWaterReference: number | null = null;
                       
                       if (isDual && shubo.individualRecipeData && shubo.individualRecipeData[dischargeIndex]) {
-                        // 2個酛の場合は個別のレシピから取得
                         const individualRecipe = dataContext.recipeRawData.find(r => 
                           r.shuboType === shubo.shuboType && 
                           r.recipeBrewingScale === shubo.originalData[dischargeIndex].brewingScale
                         );
                         soeWaterReference = individualRecipe?.初添_汲み水 || null;
                       } else {
-                        // 通常の酛の場合
                         const recipe = dataContext.recipeRawData.find(r => 
                           r.shuboType === shubo.shuboType && 
                           r.recipeBrewingScale === shubo.originalData[0].brewingScale
@@ -812,13 +908,11 @@ const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
                         soeWaterReference = recipe?.初添_汲み水 || null;
                       }
 
-                      // 準備添汲水量と尺の計算
-                      // 準備添汲水量と尺の計算
-                      const preparationSoeWater = soeWaterReference !== null && input.iceAmount !== null
-                        ? soeWaterReference - input.iceAmount
+                      const preparationSoeWater = soeWaterReference !== null && iceAmount
+                        ? soeWaterReference - Number(iceAmount)
                         : null;
-                      const preparationSoeKensyaku = preparationSoeWater !== null && input.destinationTank
-                        ? getKensyakuFromCapacity(input.destinationTank, preparationSoeWater)
+                      const preparationSoeKensyaku = preparationSoeWater !== null && destinationTank
+                        ? getKensyakuFromCapacity(String(destinationTank), preparationSoeWater)
                         : null;
 
                       return (
@@ -828,14 +922,14 @@ const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
                           <td className="px-3 py-2">
                             <input 
                               type="number" 
-                              value={input.beforeDischargeKensyaku || ''} 
-                              onChange={(e) => setDischargeInput({
-                                ...dischargeInput,
-                                [inputKey]: {
-                                  ...input,
-                                  beforeDischargeKensyaku: e.target.value ? parseFloat(e.target.value) : null
-                                }
-                              })}
+                              value={beforeDischargeKensyaku} 
+                              onChange={(e) => updateDischargeInput(
+                                shubo.primaryNumber,
+                                shubo.fiscalYear,
+                                dischargeIndex + 1,
+                                'beforeDischargeKensyaku',
+                                e.target.value ? parseFloat(e.target.value) : null
+                              )}
                               placeholder="250" 
                               className="w-16 px-2 py-1 text-sm border rounded" 
                             />
@@ -846,14 +940,14 @@ const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
                           <td className="px-3 py-2">
                             <input 
                               type="number" 
-                              value={input.afterDischargeCapacity !== null ? input.afterDischargeCapacity : ''} 
-                              onChange={(e) => setDischargeInput({
-                                ...dischargeInput,
-                                [inputKey]: {
-                                  ...input,
-                                  afterDischargeCapacity: e.target.value !== '' ? parseFloat(e.target.value) : null
-                                }
-                              })}
+                              value={afterDischargeCapacity} 
+                              onChange={(e) => updateDischargeInput(
+                                shubo.primaryNumber,
+                                shubo.fiscalYear,
+                                dischargeIndex + 1,
+                                'afterDischargeCapacity',
+                                e.target.value !== '' ? parseFloat(e.target.value) : null
+                              )}
                               placeholder="200" 
                               className="w-16 px-2 py-1 text-sm border rounded" 
                             />
@@ -866,14 +960,14 @@ const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
                           </td>
                           <td className="px-3 py-2">
                             <select
-                              value={input.destinationTank}
-                              onChange={(e) => setDischargeInput({
-                                ...dischargeInput,
-                                [inputKey]: {
-                                  ...input,
-                                  destinationTank: e.target.value
-                                }
-                              })}
+                              value={destinationTank}
+                              onChange={(e) => updateDischargeInput(
+                                shubo.primaryNumber,
+                                shubo.fiscalYear,
+                                dischargeIndex + 1,
+                                'destinationTank',
+                                e.target.value
+                              )}
                               className="w-24 px-2 py-1 text-sm border rounded"
                             >
                               <option value="">選択</option>
@@ -891,14 +985,14 @@ const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
                           <td className="px-3 py-2">
                             <input 
                               type="number" 
-                              value={input.iceAmount || ''} 
-                              onChange={(e) => setDischargeInput({
-                                ...dischargeInput,
-                                [inputKey]: {
-                                  ...input,
-                                  iceAmount: e.target.value ? parseFloat(e.target.value) : null
-                                }
-                              })}
+                              value={iceAmount} 
+                              onChange={(e) => updateDischargeInput(
+                                shubo.primaryNumber,
+                                shubo.fiscalYear,
+                                dischargeIndex + 1,
+                                'iceAmount',
+                                e.target.value ? parseFloat(e.target.value) : null
+                              )}
                               placeholder="0" 
                               className="w-16 px-2 py-1 text-sm border rounded" 
                             />
@@ -990,16 +1084,16 @@ const input = brewingInput[brewingKey] || { afterBrewingKensyaku: null };
                           dailyEnvironment={dailyEnvironment}
                           onUpdateRecord={handleUpdateRecord}
                           brewingInput={brewingInput[createShuboKey(shubo.primaryNumber, shubo.fiscalYear)]}
-dischargeInput={
-  shubo.shuboEndDates.map((_, index) => {
-    const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${index + 1}`;
-    const input = dischargeInput[key];
-    return input || {
-      beforeDischargeKensyaku: null,
-      afterDischargeCapacity: null
-    };
-  })
-}
+                          dischargeInput={
+                            shubo.shuboEndDates.map((_, index) => {
+                              const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${index + 1}`;
+                              const input = dischargeInput[key];
+                              return input || {
+                                beforeDischargeKensyaku: null,
+                                afterDischargeCapacity: null
+                              };
+                            })
+                          }
                           getCapacityFromKensyaku={getCapacityFromKensyaku}
                         />
                       )}
