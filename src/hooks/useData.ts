@@ -220,9 +220,15 @@ async function importFromSupabaseStorage() {
   }
 
   async function saveConfiguredShuboData(data: ConfiguredShuboData[]) {
+    const formatLocalDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
     const { error } = await supabase.from('shubo_configured_data').upsert(data.map(s => ({
       shubo_number: s.shuboNumber, fiscal_year: s.fiscalYear, selected_tank_id: s.selectedTankId,
-      shubo_type: s.shuboType, shubo_start_date: s.shuboStartDate.toISOString(), shubo_end_date: s.shuboEndDate.toISOString(),
+      shubo_type: s.shuboType, shubo_start_date: formatLocalDate(s.shuboStartDate), shubo_end_date: formatLocalDate(s.shuboEndDate),
       shubo_days: s.shuboDays, display_name: s.displayName, recipe_data: s.recipeData,
       original_data: s.originalData, updated_at: new Date().toISOString()
     })), { onConflict: 'shubo_number,fiscal_year' })

@@ -322,23 +322,26 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
   };
 
   const todayWorks = useMemo(() => {
-    const today = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
-    
-    const tomorrow = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1);
+    const tomorrow = new Date(currentDate);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    const today = new Date(currentDate);
+    today.setHours(0, 0, 0, 0);
 
     const preparations = dataContext.mergedShuboData.filter(shubo => {
-      const tempDate = shubo.shuboStartDate instanceof Date 
-        ? shubo.shuboStartDate 
+      const startDate = shubo.shuboStartDate instanceof Date 
+        ? new Date(shubo.shuboStartDate) 
         : new Date(shubo.shuboStartDate);
-      const startDate = new Date(tempDate.getUTCFullYear(), tempDate.getUTCMonth(), tempDate.getUTCDate());
+      startDate.setHours(0, 0, 0, 0);
       return startDate.getTime() === tomorrow.getTime();
     });
 
     const brewingSchedules = dataContext.mergedShuboData.filter(shubo => {
-      const tempDate = shubo.shuboStartDate instanceof Date 
-        ? shubo.shuboStartDate 
+      const startDate = shubo.shuboStartDate instanceof Date 
+        ? new Date(shubo.shuboStartDate) 
         : new Date(shubo.shuboStartDate);
-      const startDate = new Date(tempDate.getUTCFullYear(), tempDate.getUTCMonth(), tempDate.getUTCDate());
+      startDate.setHours(0, 0, 0, 0);
       return startDate.getTime() === today.getTime();
     });
 
@@ -362,8 +365,8 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
 
     const dischargeSchedules = dataContext.mergedShuboData.filter(shubo => {
       return shubo.shuboEndDates.some(endDate => {
-        const tempDate = endDate instanceof Date ? endDate : new Date(endDate);
-        const date = new Date(tempDate.getUTCFullYear(), tempDate.getUTCMonth(), tempDate.getUTCDate());
+        const date = endDate instanceof Date ? new Date(endDate) : new Date(endDate);
+        date.setHours(0, 0, 0, 0);
         return date.getTime() === today.getTime();
       });
     });
