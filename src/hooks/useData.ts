@@ -688,9 +688,11 @@ async function saveAnalysisSettings(settings: AnalysisSettings) {
   }
 
   function getDailyRecords(shuboNumber: number, fiscalYear?: number) {
-    const year = fiscalYear ?? currentFiscalYear
-    return dailyRecordsData.filter(r => r.shuboNumber === shuboNumber && r.fiscalYear === year)
-  }
+  const year = fiscalYear ?? currentFiscalYear
+  return dailyRecordsData
+    .filter(r => r.shuboNumber === shuboNumber && r.fiscalYear === year)
+    .sort((a, b) => a.dayNumber - b.dayNumber)  // ← これを追加
+}
 
   return {
   shuboRawData: shuboRawData.filter(s => s.fiscalYear === currentFiscalYear),
