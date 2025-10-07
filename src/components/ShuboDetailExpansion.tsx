@@ -31,9 +31,10 @@ export default function ShuboDetailExpansion({
   const tableRef = useRef<HTMLTableElement>(null);
   const [columnWidths, setColumnWidths] = useState<number[]>([]);
 
-  useEffect(() => {
-    setLocalRecords(records);
-  }, [records]);
+useEffect(() => {
+  const sorted = [...records].sort((a, b) => a.dayNumber - b.dayNumber);
+  setLocalRecords(sorted);
+}, [records]);
 
   useEffect(() => {
     if (tableRef.current) {
