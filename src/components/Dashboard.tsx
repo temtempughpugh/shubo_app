@@ -260,83 +260,79 @@ export default function Dashboard({ dataContext }: DashboardProps) {
   };
 
   const updateBrewingInput = async (shuboNumber: number, fiscalYear: number, field: 'iceAmount' | 'afterBrewingKensyaku', value: number | null) => {
-  const key = `${shuboNumber}-${fiscalYear}`;
-  
-  // ✅ 修正: 更新後の値を即座に計算
-  const currentData = localBrewingUpdates.get(key) || {};
-  const updatedData = { ...currentData, [field]: value };
-  
-  setLocalBrewingUpdates(prev => {
-    const newMap = new Map(prev);
-    newMap.set(key, updatedData);
-    return newMap;
-  });
-
-  const timerKey = `brewing-prep-${key}`;
-  const existingTimer = debounceTimers.current.get(timerKey);
-  if (existingTimer) clearTimeout(existingTimer);
-
-  const newTimer = setTimeout(async () => {
-    // ✅ 修正: クロージャーの問題を回避
-    await dataContext.saveBrewingPreparation(
-      shuboNumber,
-      fiscalYear,
-      {
-        ...brewingInput[key],
-        ...updatedData  // ← 事前に計算した値を使用
-      }
-    );
+    const key = `${shuboNumber}-${fiscalYear}`;
     
     setLocalBrewingUpdates(prev => {
       const newMap = new Map(prev);
-      newMap.delete(key);
+      const existing = prev.get(key) || {};
+      newMap.set(key, { ...existing, [field]: value });
       return newMap;
     });
-    debounceTimers.current.delete(timerKey);
-  }, 500);
 
-  debounceTimers.current.set(timerKey, newTimer);
-};
+    const timerKey = `brewing-prep-${key}`;
+    const existingTimer = debounceTimers.current.get(timerKey);
+    if (existingTimer) clearTimeout(existingTimer);
 
-const updateDischargeInput = async (shuboNumber: number, fiscalYear: number, index: number, field: string, value: any) => {
-  const key = `${shuboNumber}-${fiscalYear}-${index}`;
-  
-  // ✅ 修正: 更新後の値を即座に計算
-  const currentData = localDischargeUpdates.get(key) || {};
-  const updatedData = { ...currentData, [field]: value };
-  
-  setLocalDischargeUpdates(prev => {
-    const newMap = new Map(prev);
-    newMap.set(key, updatedData);
-    return newMap;
-  });
+    const newTimer = setTimeout(async () => {
+      const mergedUpdates = localBrewingUpdates.get(key) || {};
+      await dataContext.saveBrewingPreparation(
+        shuboNumber,
+        fiscalYear,
+        {
+          ...brewingInput[key],
+          ...mergedUpdates,
+          [field]: value
+        }
+      );
+      
+      setLocalBrewingUpdates(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(key);
+        return newMap;
+      });
+      debounceTimers.current.delete(timerKey);
+    }, 500);
 
-  const timerKey = `discharge-${key}`;
-  const existingTimer = debounceTimers.current.get(timerKey);
-  if (existingTimer) clearTimeout(existingTimer);
+    debounceTimers.current.set(timerKey, newTimer);
+  };
 
-  const newTimer = setTimeout(async () => {
-    // ✅ 修正: クロージャーの問題を回避
-    await dataContext.saveDischargeSchedule(
-      shuboNumber,
-      fiscalYear,
-      index,
-      {
-        ...dischargeInput[key],
-        ...updatedData  // ← 事前に計算した値を使用
-      }
-    );
+  const updateDischargeInput = async (shuboNumber: number, fiscalYear: number, index: number, field: string, value: any) => {
+    const key = `${shuboNumber}-${fiscalYear}-${index}`;
     
     setLocalDischargeUpdates(prev => {
       const newMap = new Map(prev);
-      newMap.delete(key);
+      const existing = prev.get(key) || {};
+      newMap.set(key, { ...existing, [field]: value });
       return newMap;
     });
-    debounceTimers.current.delete(timerKey);
-  }, 500);
 
-  debounceTimers.current.set(timerKey, newTimer);
-};
+    const timerKey = `discharge-${key}`;
+    const existingTimer = debounceTimers.current.get(timerKey);
+    if (existingTimer) clearTimeout(existingTimer);
+
+    const newTimer = setTimeout(async () => {
+      const mergedUpdates = localDischargeUpdates.get(key) || {};
+      await dataContext.saveDischargeSchedule(
+        shuboNumber,
+        fiscalYear,
+        index,
+        {
+          ...dischargeInput[key],
+          ...mergedUpdates,
+          [field]: value
+        }
+      );
+      
+      setLocalDischargeUpdates(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(key);
+        return newMap;
+      });
+      debounceTimers.current.delete(timerKey);
+    }, 500);
+
+    debounceTimers.current.set(timerKey, newTimer);
+  };
 
   const todayWorks = useMemo(() => {
     const tomorrow = new Date(currentDate);
