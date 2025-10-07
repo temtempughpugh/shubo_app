@@ -44,7 +44,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
   const dischargeInput = dataContext.dischargeSchedule || {};
 
 const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial<DailyRecordData>>>(new Map());
-  const [localBrewingUpdates] = useState<Map<string, any>>(new Map());
+  const [localBrewingUpdates, setLocalBrewingUpdates] = useState<Map<string, any>>(new Map());
   const [localDischargeUpdates, setLocalDischargeUpdates] = useState<Map<string, any>>(new Map());
   const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
@@ -254,6 +254,12 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
   const updateBrewingInput = async (shuboNumber: number, fiscalYear: number, field: 'iceAmount' | 'afterBrewingKensyaku', value: number | null) => {
     const key = `${shuboNumber}-${fiscalYear}`;
     
+    setLocalBrewingUpdates(prev => {
+      const newMap = new Map(prev);
+      const existing = prev.get(key) || {};
+      newMap.set(key, { ...existing, [field]: value });
+      return newMap;
+    });
 
     const timerKey = `brewing-prep-${key}`;
     const existingTimer = debounceTimers.current.get(timerKey);
