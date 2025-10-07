@@ -322,12 +322,9 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
   };
 
   const todayWorks = useMemo(() => {
-    const tomorrow = new Date(currentDate);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
-
-    const today = new Date(currentDate);
-    today.setHours(0, 0, 0, 0);
+    const today = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+    
+    const tomorrow = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1);
 
     const preparations = dataContext.mergedShuboData.filter(shubo => {
       const startDate = shubo.shuboStartDate instanceof Date 
