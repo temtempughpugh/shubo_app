@@ -9,17 +9,12 @@ export function calculateFiscalYear(date: Date): number {
 
 // Excelシリアル値をJavaScript Dateに変換
 export function convertExcelDateToJs(excelDate: number): Date {
-  const excelEpoch = new Date(1899, 11, 30);
   const days = Math.floor(excelDate);
-  const time = excelDate - days;
-  
-  const date = new Date(excelEpoch.getTime() + days * 24 * 60 * 60 * 1000);
-  
-  if (time > 0) {
-    date.setTime(date.getTime() + time * 24 * 60 * 60 * 1000);
-  }
-  
-  return date;
+  const baseDate = new Date(1900, 0, 1);
+  const result = new Date(baseDate);
+  result.setDate(result.getDate() + (days - 1));
+  result.setHours(0, 0, 0, 0);
+  return result;
 }
 
 // 日付表示フォーマット
