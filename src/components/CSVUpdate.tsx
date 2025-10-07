@@ -661,44 +661,74 @@ const dischargeInputArray = shubo.shuboEndDates.map((_, index) => {
     });
 
     const tempPoints: Array<{ x: number; y: number }> = [];
-    sortedRecords.forEach((record, index) => {
-      if (record.temperature1 !== null) {
-        const colWidth = columnWidths[index];
-        const colStart = padding.left + columnWidths.slice(0, index).reduce((sum, w) => sum + w, 0);
-        const xPos = colStart + colWidth * 0.3;
-        tempPoints.push({ x: xPos, y: tempToY(record.temperature1) });
-      }
-    });
+sortedRecords.forEach((record, index) => {
+  const colWidth = columnWidths[index];
+  const colStart = padding.left + columnWidths.slice(0, index).reduce((sum, w) => sum + w, 0);
+  
+  if (record.temperature1 !== null) {
+    const xPos1 = colStart + colWidth * 0.25;
+    tempPoints.push({ x: xPos1, y: tempToY(record.temperature1) });
+  }
+  if (record.temperature2 !== null) {
+    const xPos2 = colStart + colWidth * 0.5;
+    tempPoints.push({ x: xPos2, y: tempToY(record.temperature2) });
+  }
+  if (record.temperature3 !== null) {
+    const xPos3 = colStart + colWidth * 0.75;
+    tempPoints.push({ x: xPos3, y: tempToY(record.temperature3) });
+  }
+});
 
-    if (tempPoints.length > 1) {
-      let pathD = `M ${tempPoints[0].x} ${tempPoints[0].y}`;
-      for (let i = 1; i < tempPoints.length; i++) {
-        pathD += ` L ${tempPoints[i].x} ${tempPoints[i].y}`;
-      }
-      svg += `<path d="${pathD}" stroke="#3b82f6" stroke-width="2" fill="none"/>`;
-    }
+const airTempPoints: Array<{ x: number; y: number }> = [];
+sortedRecords.forEach((record, index) => {
+  const airTemp = getAirTemp(record);
+  if (airTemp !== '-') {
+    const colWidth = columnWidths[index];
+    const colStart = padding.left + columnWidths.slice(0, index).reduce((sum, w) => sum + w, 0);
+    const xPosAir = colStart + colWidth / 2;
+    airTempPoints.push({ x: xPosAir, y: tempToY(parseFloat(airTemp)) });
+  }
+});
 
-    sortedRecords.forEach((record, index) => {
-      const colWidth = columnWidths[index];
-      const colStart = padding.left + columnWidths.slice(0, index).reduce((sum, w) => sum + w, 0);
-      
-      if (record.temperature1 !== null) {
-        const xPos1 = colStart + colWidth * 0.3;
-        svg += `<circle cx="${xPos1}" cy="${tempToY(record.temperature1)}" r="4" fill="#3b82f6" stroke="white" stroke-width="1"/>`;
-      }
-      
-      if (record.temperature2 !== null) {
-        const xPos2 = colStart + colWidth * 0.5;
-        svg += `<circle cx="${xPos2}" cy="${tempToY(record.temperature2)}" r="4" fill="#10b981" stroke="white" stroke-width="1"/>`;
-      }
-      
-      if (record.temperature3 !== null) {
-        const xPos3 = colStart + colWidth * 0.7;
-        svg += `<circle cx="${xPos3}" cy="${tempToY(record.temperature3)}" r="4" fill="#fed7aa" stroke="white" stroke-width="1"/>`;
-      }
-    });
+if (tempPoints.length > 1) {
+  for (let i = 1; i < tempPoints.length; i++) {
+    svg += `<line x1="${tempPoints[i-1].x}" y1="${tempPoints[i-1].y}" x2="${tempPoints[i].x}" y2="${tempPoints[i].y}" stroke="#f97316" stroke-width="2"/>`;
+  }
+}
 
-    svg += '</svg>';
+if (airTempPoints.length > 1) {
+  for (let i = 1; i < airTempPoints.length; i++) {
+    svg += `<line x1="${airTempPoints[i-1].x}" y1="${airTempPoints[i-1].y}" x2="${airTempPoints[i].x}" y2="${airTempPoints[i].y}" stroke="#ef4444" stroke-width="2" stroke-dasharray="4 4"/>`;
+  }
+}
+
+sortedRecords.forEach((record, index) => {
+  const colWidth = columnWidths[index];
+  const colStart = padding.left + columnWidths.slice(0, index).reduce((sum, w) => sum + w, 0);
+  
+  if (record.temperature1 !== null) {
+    const xPos1 = colStart + colWidth * 0.25;
+    svg += `<circle cx="${xPos1}" cy="${tempToY(record.temperature1)}" r="4" fill="#ea580c" stroke="white" stroke-width="1"/>`;
+  }
+  
+  if (record.temperature2 !== null) {
+    const xPos2 = colStart + colWidth * 0.5;
+    svg += `<circle cx="${xPos2}" cy="${tempToY(record.temperature2)}" r="4" fill="#fb923c" stroke="white" stroke-width="1"/>`;
+  }
+  
+  if (record.temperature3 !== null) {
+    const xPos3 = colStart + colWidth * 0.75;
+    svg += `<circle cx="${xPos3}" cy="${tempToY(record.temperature3)}" r="4" fill="#fed7aa" stroke="white" stroke-width="1"/>`;
+  }
+  
+  const airTemp = getAirTemp(record);
+  if (airTemp !== '-') {
+    const xPosAir = colStart + colWidth / 2;
+    svg += `<circle cx="${xPosAir}" cy="${tempToY(parseFloat(airTemp))}" r="4" fill="#ef4444" stroke="white" stroke-width="1"/>`;
+  }
+});
+
+svg += '</svg>';
 
     // 卸し情報HTML生成
     let dischargeHTML = '';
