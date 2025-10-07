@@ -192,40 +192,6 @@ newShuboData.forEach(shubo => {
 
     // ✅ localStorage削除 - Supabaseのみに保存
     dataContext.setConfiguredShuboData(updatedWithDualInfo);
-
-    // daily_recordsのマージ処理
-    const dailyRecords = dataContext.dailyRecordsData;
-    const keptRecords = dailyRecords.filter((r: any) => 
-      !preview.toUpdate.includes(createShuboKey(r.shuboNumber, r.fiscalYear))
-    );
-
-    const updatedRecords = dailyRecords.filter((r: any) => 
-      preview.toUpdate.includes(createShuboKey(r.shuboNumber, r.fiscalYear))
-    ).map((record: any) => {
-      const newRaw = newShuboData.find(s => 
-        s.shuboNumber === record.shuboNumber && s.fiscalYear === record.fiscalYear
-      );
-      if (!newRaw) return null;
-      
-      const newStartDate = convertExcelDateToJs(parseFloat(newRaw.shuboStartDate));
-      const newEndDate = convertExcelDateToJs(parseFloat(newRaw.shuboEndDate));
-      
-      const recordDate = new Date(record.recordDate);
-      recordDate.setHours(0, 0, 0, 0);
-      newStartDate.setHours(0, 0, 0, 0);
-      newEndDate.setHours(0, 0, 0, 0);
-      
-      if (recordDate >= newStartDate && recordDate <= newEndDate) {
-        return {
-          ...record,
-          fiscalYear: newRaw.fiscalYear
-        };
-      }
-      
-      return null;
-    }).filter(Boolean);
-
-    const mergedRecords = [...keptRecords, ...updatedRecords];
     
     
 
