@@ -173,11 +173,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
       const mergedUpdates = localRecordUpdates.get(key) || {};
       dataContext.updateDailyRecord({ ...record, ...mergedUpdates, ...updates });
       
-      setLocalRecordUpdates(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(key);
-        return newMap;
-      });
+
       debounceTimers.current.delete(key);
     }, 1500);
 
@@ -204,11 +200,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
       const mergedUpdates = localRecordUpdates.get(key) || {};
       dataContext.updateDailyRecord({ ...record, ...mergedUpdates, ...updates });
       
-      setLocalRecordUpdates(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(key);
-        return newMap;
-      });
+
       debounceTimers.current.delete(key);
     }, 1500);
 
@@ -595,11 +587,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                   temperature1: value 
                                 });
                                 
-                                setLocalRecordUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.delete(key);
-                                  return newMap;
-                                });
+                             
                               }}
                               placeholder="20.5" 
                               className="w-14 px-1 py-1 text-xs border rounded" 
@@ -633,11 +621,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                   baume: value 
                                 });
                                 
-                                setLocalRecordUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.delete(key);
-                                  return newMap;
-                                });
+                     
                               }}
                               placeholder="10.5" 
                               className="w-14 px-1 py-1 text-xs border rounded" 
@@ -670,11 +654,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                   acidity: value 
                                 });
                                 
-                                setLocalRecordUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.delete(key);
-                                  return newMap;
-                                });
+                    
                               }}
                               placeholder="2.5" 
                               className="w-14 px-1 py-1 text-xs border rounded" 
@@ -708,11 +688,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                   temperature2: value 
                                 });
                                 
-                                setLocalRecordUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.delete(key);
-                                  return newMap;
-                                });
+                              
                               }}
                               placeholder="22.0" 
                               className="w-14 px-1 py-1 text-xs border rounded" 
@@ -737,12 +713,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                 const mergedUpdates = localRecordUpdates.get(key) || {};
                                 const value = e.target.value;
                                 
-                                setLocalRecordUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.set(key, { ...mergedUpdates, memo: value });
-                                  return newMap;
-                                });
-                                
+                           
                                 await dataContext.updateDailyRecord({ 
                                   ...record, 
                                   ...mergedUpdates, 
@@ -942,11 +913,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                 const mergedUpdates = localRecordUpdates.get(key) || {};
                                 const value = e.target.value ? parseFloat(e.target.value) : null;
                                 
-                                setLocalRecordUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.set(key, { ...mergedUpdates, temperature1: value });
-                                  return newMap;
-                                });
+                            
                                 
                                 await dataContext.updateDailyRecord({ 
                                   ...record, 
@@ -979,11 +946,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                 const mergedUpdates = localRecordUpdates.get(key) || {};
                                 const value = e.target.value ? parseFloat(e.target.value) : null;
                                 
-                                setLocalRecordUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.set(key, { ...mergedUpdates, temperature2: value });
-                                  return newMap;
-                                });
+                             
                                 
                                 await dataContext.updateDailyRecord({ 
                                   ...record, 
