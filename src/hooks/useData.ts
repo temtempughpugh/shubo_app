@@ -207,8 +207,8 @@ async function importFromSupabaseStorage() {
     if (error) throw error
     setConfiguredShuboDataState((data || []).map((r: any) => ({
       shuboNumber: r.shubo_number, fiscalYear: r.fiscal_year, selectedTankId: r.selected_tank_id || '',
-      shuboType: r.shubo_type || '', shuboStartDate: new Date(r.shubo_start_date || Date.now()),
-      shuboEndDate: new Date(r.shubo_end_date || Date.now()), shuboDays: r.shubo_days || 0,
+      shuboType: r.shubo_type || '', shuboStartDate: new Date(r.shubo_start_date + 'T00:00:00'),
+      shuboEndDate: new Date(r.shubo_end_date + 'T00:00:00'), shuboDays: r.shubo_days || 0,
       displayName: r.display_name || '', recipeData: r.recipe_data || {}, originalData: r.original_data || {},
       tankData: { tankDisplayName: '', maxCapacity: 0, waterKensyaku: 0, waterCapacity: 0 },
       dualShuboInfo: { isDualShubo: false, isPrimary: false, primaryNumber: r.shubo_number, combinedDisplayName: '' }
