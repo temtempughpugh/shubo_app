@@ -327,18 +327,18 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
     const tomorrow = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1);
 
     const preparations = dataContext.mergedShuboData.filter(shubo => {
-      const startDate = shubo.shuboStartDate instanceof Date 
-        ? new Date(shubo.shuboStartDate) 
+      const tempDate = shubo.shuboStartDate instanceof Date 
+        ? shubo.shuboStartDate 
         : new Date(shubo.shuboStartDate);
-      startDate.setHours(0, 0, 0, 0);
+      const startDate = new Date(tempDate.getUTCFullYear(), tempDate.getUTCMonth(), tempDate.getUTCDate());
       return startDate.getTime() === tomorrow.getTime();
     });
 
     const brewingSchedules = dataContext.mergedShuboData.filter(shubo => {
-      const startDate = shubo.shuboStartDate instanceof Date 
-        ? new Date(shubo.shuboStartDate) 
+      const tempDate = shubo.shuboStartDate instanceof Date 
+        ? shubo.shuboStartDate 
         : new Date(shubo.shuboStartDate);
-      startDate.setHours(0, 0, 0, 0);
+      const startDate = new Date(tempDate.getUTCFullYear(), tempDate.getUTCMonth(), tempDate.getUTCDate());
       return startDate.getTime() === today.getTime();
     });
 
@@ -362,8 +362,8 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
 
     const dischargeSchedules = dataContext.mergedShuboData.filter(shubo => {
       return shubo.shuboEndDates.some(endDate => {
-        const date = endDate instanceof Date ? new Date(endDate) : new Date(endDate);
-        date.setHours(0, 0, 0, 0);
+        const tempDate = endDate instanceof Date ? endDate : new Date(endDate);
+        const date = new Date(tempDate.getUTCFullYear(), tempDate.getUTCMonth(), tempDate.getUTCDate());
         return date.getTime() === today.getTime();
       });
     });
