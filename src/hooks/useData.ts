@@ -533,9 +533,8 @@ async function saveAnalysisSettings(settings: AnalysisSettings) {
       const { error } = await supabase
         .from('shubo_daily_records')
         .upsert(updates, {
-          onConflict: 'shubo_number,fiscal_year,day_number'
+          onConflict: 'shubo_number,fiscal_year,record_date,time_slot'
         })
-      
       if (error) throw error
       
       await loadDailyRecordsData()
