@@ -624,7 +624,16 @@ const dischargeInputArray = shubo.shuboEndDates.map((_, index) => {
     afterDischargeCapacity: null
   };
 });
-    
+    // 気温データ取得
+const getAirTemp = (record: DailyRecordData) => {
+  const date = record.recordDate instanceof Date 
+    ? record.recordDate 
+    : new Date(record.recordDate);
+  const dateKey = dateToKey(date);
+  const env = envData[dateKey];
+  return env?.temperature || '-';
+};
+
     // グラフ生成
     const graphWidth = 1100;
     const graphHeight = 200;
@@ -761,17 +770,6 @@ svg += '</svg>';
         return html;
       }).join('');
     }
-
-    // 気温データ取得
-    // 気温データ取得
-const getAirTemp = (record: DailyRecordData) => {
-  const date = record.recordDate instanceof Date 
-    ? record.recordDate 
-    : new Date(record.recordDate);
-  const dateKey = dateToKey(date);
-  const env = envData[dateKey];
-  return env?.temperature || '-';
-};
     
     return `
       <div class="page">
