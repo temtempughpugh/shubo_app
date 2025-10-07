@@ -227,8 +227,7 @@ newShuboData.forEach(shubo => {
 
     const mergedRecords = [...keptRecords, ...updatedRecords];
     
-    // ✅ localStorage削除 - Supabaseに保存
-    await dataContext.bulkUpdateDailyRecords(mergedRecords);
+    
 
     // brewing_preparationとdischarge_scheduleの削除
     // ✅ localStorage削除 - Supabaseから削除
