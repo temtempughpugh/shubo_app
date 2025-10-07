@@ -540,202 +540,267 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-slate-100 border-b">
-                      <th className="px-2 py-2 text-left text-xs font-bold">採取</th>
-                      <th className="px-2 py-2 text-left text-xs font-bold">酒母名</th>
-                      <th className="px-2 py-2 text-left text-xs font-bold">日数</th>
-                      <th className="px-2 py-2 text-left text-xs font-bold">品温</th>
-                      <th className="px-2 py-2 text-left text-xs font-bold">ボーメ</th>
-                      <th className="px-2 py-2 text-left text-xs font-bold">酸度</th>
-                      <th className="px-2 py-2 text-left text-xs font-bold">加温後品温</th>
-                      <th className="px-2 py-2 text-left text-xs font-bold">メモ</th>
-                    </tr>
-                  </thead>
+  <tr className="bg-slate-100 border-b">
+    <th className="px-2 py-2 text-left text-xs font-bold">採取</th>
+    <th className="px-2 py-2 text-left text-xs font-bold">酒母名</th>
+    <th className="px-2 py-2 text-left text-xs font-bold">酵母</th>
+    <th className="px-2 py-2 text-left text-xs font-bold">日数</th>
+    <th className="px-2 py-2 text-left text-xs font-bold">ラベル</th>
+    <th className="px-2 py-2 text-left text-xs font-bold">品温</th>
+    <th className="px-2 py-2 text-left text-xs font-bold">ボーメ</th>
+    <th className="px-2 py-2 text-left text-xs font-bold">直近ボーメ</th>
+    <th className="px-2 py-2 text-left text-xs font-bold">酸度</th>
+    <th className="px-2 py-2 text-left text-xs font-bold">加温後品温</th>
+    <th className="px-2 py-2 text-left text-xs font-bold">午後品温</th>
+    <th className="px-2 py-2 text-left text-xs font-bold">メモ</th>
+  </tr>
+</thead>
                   <tbody>
-                    {todayWorks.analysisSchedules.map(shubo => {
-                      const dayNum = calculateDayNumber(shubo.shuboStartDate, currentDate);
-                      const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
+  {todayWorks.analysisSchedules.map(shubo => {
+    const dayNum = calculateDayNumber(shubo.shuboStartDate, currentDate);
+    const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
+    
+    const allRecords = dataContext.getDailyRecords(shubo.primaryNumber, shubo.fiscalYear);
+    const recordsWithBaume = allRecords.filter(r => r.baume !== null).sort((a, b) => b.dayNumber - a.dayNumber);
+    const latestBaume = recordsWithBaume.length > 0 ? recordsWithBaume[0] : null;
 
-                      return (
-                        <tr key={`${shubo.primaryNumber}-${shubo.fiscalYear}`} className="border-b hover:bg-slate-50">
-                          <td className="px-2 py-2 text-center">
-                            {record?.isAnalysisDay ? (
-                              <span className="text-blue-600 font-bold text-lg">○</span>
-                            ) : null}
-                          </td>
-                          <td className="px-2 py-2 font-bold text-blue-700 text-xs">{shubo.displayName}</td>
-                          <td className="px-2 py-2 text-xs">{dayNum}日目</td>
-                          <td className="px-2 py-2">
-                            <input 
-                              type="number" 
-                              step="0.1" 
-                              value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'temperature1')} 
-                              onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
-                                temperature1: e.target.value ? parseFloat(e.target.value) : null
-                              })}
-                              onBlur={async (e) => {
-                                const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
-                                if (!record) return;
-                                const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
-                                const existingTimer = debounceTimers.current.get(key);
-                                if (existingTimer) {
-                                  clearTimeout(existingTimer);
-                                  debounceTimers.current.delete(key);
-                                }
-                                const mergedUpdates = localRecordUpdates.get(key) || {};
-                                const value = e.target.value ? parseFloat(e.target.value) : null;
-                                
-                                
-                                
-                                await dataContext.updateDailyRecord({ 
-                                  ...record, 
-                                  ...mergedUpdates, 
-                                  temperature1: value 
-                                });
-                                
-                             
-                              }}
-                              placeholder="20.5" 
-                              className="w-14 px-1 py-1 text-xs border rounded" 
-                            />
-                          </td>
-                          <td className="px-2 py-2">
-                            <input 
-                              type="number" 
-                              step="0.1" 
-                              value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'baume')} 
-                              onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
-                                baume: e.target.value ? parseFloat(e.target.value) : null
-                              })}
-                              onBlur={async (e) => {
-                                const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
-                                if (!record) return;
-                                const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
-                                const existingTimer = debounceTimers.current.get(key);
-                                if (existingTimer) {
-                                  clearTimeout(existingTimer);
-                                  debounceTimers.current.delete(key);
-                                }
-                                const mergedUpdates = localRecordUpdates.get(key) || {};
-                                const value = e.target.value ? parseFloat(e.target.value) : null;
-                                
-                            
-                                
-                                await dataContext.updateDailyRecord({ 
-                                  ...record, 
-                                  ...mergedUpdates, 
-                                  baume: value 
-                                });
-                                
-                     
-                              }}
-                              placeholder="10.5" 
-                              className="w-14 px-1 py-1 text-xs border rounded" 
-                            />
-                          </td>
-                          <td className="px-2 py-2">
-                            <input 
-                              type="number" 
-                              step="0.1" 
-                              value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'acidity')} 
-                              onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
-                                acidity: e.target.value ? parseFloat(e.target.value) : null
-                              })}
-                              onBlur={async (e) => {
-                                const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
-                                if (!record) return;
-                                const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
-                                const existingTimer = debounceTimers.current.get(key);
-                                if (existingTimer) {
-                                  clearTimeout(existingTimer);
-                                  debounceTimers.current.delete(key);
-                                }
-                                const mergedUpdates = localRecordUpdates.get(key) || {};
-                                const value = e.target.value ? parseFloat(e.target.value) : null;
-                                
-                              
-                                await dataContext.updateDailyRecord({ 
-                                  ...record, 
-                                  ...mergedUpdates, 
-                                  acidity: value 
-                                });
-                                
-                    
-                              }}
-                              placeholder="2.5" 
-                              className="w-14 px-1 py-1 text-xs border rounded" 
-                            />
-                          </td>
-                          <td className="px-2 py-2">
-                            <input 
-                              type="number" 
-                              step="0.1" 
-                              value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'temperature2')} 
-                              onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
-                                temperature2: e.target.value ? parseFloat(e.target.value) : null
-                              })}
-                              onBlur={async (e) => {
-                                const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
-                                if (!record) return;
-                                const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
-                                const existingTimer = debounceTimers.current.get(key);
-                                if (existingTimer) {
-                                  clearTimeout(existingTimer);
-                                  debounceTimers.current.delete(key);
-                                }
-                                const mergedUpdates = localRecordUpdates.get(key) || {};
-                                const value = e.target.value ? parseFloat(e.target.value) : null;
-                                
-                               
-                                
-                                await dataContext.updateDailyRecord({ 
-                                  ...record, 
-                                  ...mergedUpdates, 
-                                  temperature2: value 
-                                });
-                                
-                              
-                              }}
-                              placeholder="22.0" 
-                              className="w-14 px-1 py-1 text-xs border rounded" 
-                            />
-                          </td>
-                          <td className="px-2 py-2">
-                            <input 
-                              type="text" 
-                              value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'memo')} 
-                              onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
-                                memo: e.target.value
-                              })}
-                              onBlur={async (e) => {
-                                const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
-                                if (!record) return;
-                                const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
-                                const existingTimer = debounceTimers.current.get(key);
-                                if (existingTimer) {
-                                  clearTimeout(existingTimer);
-                                  debounceTimers.current.delete(key);
-                                }
-                                const mergedUpdates = localRecordUpdates.get(key) || {};
-                                const value = e.target.value;
-                                
-                           
-                                await dataContext.updateDailyRecord({ 
-                                  ...record, 
-                                  ...mergedUpdates, 
-                                  memo: value 
-                                });
-                                
-                            
-                              }}
-                              placeholder="順調" 
-                              className="w-full px-2 py-1 text-xs border rounded" 
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
+    return (
+      <tr key={`${shubo.primaryNumber}-${shubo.fiscalYear}`} className="border-b hover:bg-slate-50">
+        <td className="px-2 py-2 text-center">
+          {record?.isAnalysisDay ? (
+            <span className="text-blue-600 font-bold text-lg">○</span>
+          ) : null}
+        </td>
+        <td className="px-2 py-2 font-bold text-blue-700 text-xs">{shubo.displayName}</td>
+        <td className="px-2 py-2 text-xs">{shubo.originalData[0]?.yeast || '-'}</td>
+        <td className="px-2 py-2 text-xs">{dayNum}日目</td>
+        <td className="px-2 py-2">
+          {record && (dayNum === 1 || dayNum === 2 || dayNum === shubo.maxShuboDays) ? (
+            <span className="text-xs">{record.dayLabel}</span>
+          ) : record ? (
+            <select
+              value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'dayLabel') as string}
+              onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
+                dayLabel: e.target.value
+              })}
+              onBlur={async (e) => {
+                const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
+                if (!record) return;
+                const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
+                const existingTimer = debounceTimers.current.get(key);
+                if (existingTimer) {
+                  clearTimeout(existingTimer);
+                  debounceTimers.current.delete(key);
+                }
+                const mergedUpdates = localRecordUpdates.get(key) || {};
+                
+                await dataContext.updateDailyRecord({ 
+                  ...record, 
+                  ...mergedUpdates, 
+                  dayLabel: e.target.value 
+                });
+              }}
+              className="w-16 px-1 py-1 text-xs border rounded"
+            >
+              <option value="-">-</option>
+              <option value="暖気">暖気</option>
+              <option value="分け">分け</option>
+              <option value="卸し">卸し</option>
+            </select>
+          ) : <span>-</span>}
+        </td>
+        <td className="px-2 py-2">
+          <input 
+            type="number" 
+            step="0.1" 
+            value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'temperature1')} 
+            onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
+              temperature1: e.target.value ? parseFloat(e.target.value) : null
+            })}
+            onBlur={async (e) => {
+              const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
+              if (!record) return;
+              const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
+              const existingTimer = debounceTimers.current.get(key);
+              if (existingTimer) {
+                clearTimeout(existingTimer);
+                debounceTimers.current.delete(key);
+              }
+              const mergedUpdates = localRecordUpdates.get(key) || {};
+              const value = e.target.value ? parseFloat(e.target.value) : null;
+              
+              await dataContext.updateDailyRecord({ 
+                ...record, 
+                ...mergedUpdates, 
+                temperature1: value 
+              });
+            }}
+            placeholder="20.5" 
+            className="w-14 px-1 py-1 text-xs border rounded" 
+          />
+        </td>
+        <td className="px-2 py-2">
+          <input 
+            type="number" 
+            step="0.1" 
+            value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'baume')} 
+            onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
+              baume: e.target.value ? parseFloat(e.target.value) : null
+            })}
+            onBlur={async (e) => {
+              const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
+              if (!record) return;
+              const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
+              const existingTimer = debounceTimers.current.get(key);
+              if (existingTimer) {
+                clearTimeout(existingTimer);
+                debounceTimers.current.delete(key);
+              }
+              const mergedUpdates = localRecordUpdates.get(key) || {};
+              const value = e.target.value ? parseFloat(e.target.value) : null;
+              
+              await dataContext.updateDailyRecord({ 
+                ...record, 
+                ...mergedUpdates, 
+                baume: value 
+              });
+            }}
+            placeholder="10.5" 
+            className="w-14 px-1 py-1 text-xs border rounded" 
+          />
+        </td>
+        <td className="px-2 py-2">
+          {latestBaume ? (
+            <span className="text-orange-600 font-semibold text-xs">
+              {latestBaume.dayNumber}日目 {latestBaume.baume}
+            </span>
+          ) : (
+            <span className="text-slate-400 text-xs">-</span>
+          )}
+        </td>
+        <td className="px-2 py-2">
+          <input 
+            type="number" 
+            step="0.1" 
+            value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'acidity')} 
+            onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
+              acidity: e.target.value ? parseFloat(e.target.value) : null
+            })}
+            onBlur={async (e) => {
+              const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
+              if (!record) return;
+              const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
+              const existingTimer = debounceTimers.current.get(key);
+              if (existingTimer) {
+                clearTimeout(existingTimer);
+                debounceTimers.current.delete(key);
+              }
+              const mergedUpdates = localRecordUpdates.get(key) || {};
+              const value = e.target.value ? parseFloat(e.target.value) : null;
+              
+              await dataContext.updateDailyRecord({ 
+                ...record, 
+                ...mergedUpdates, 
+                acidity: value 
+              });
+            }}
+            placeholder="2.5" 
+            className="w-14 px-1 py-1 text-xs border rounded" 
+          />
+        </td>
+        <td className="px-2 py-2">
+          <input 
+            type="number" 
+            step="0.1" 
+            value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'temperature2')} 
+            onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
+              temperature2: e.target.value ? parseFloat(e.target.value) : null
+            })}
+            onBlur={async (e) => {
+              const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
+              if (!record) return;
+              const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
+              const existingTimer = debounceTimers.current.get(key);
+              if (existingTimer) {
+                clearTimeout(existingTimer);
+                debounceTimers.current.delete(key);
+              }
+              const mergedUpdates = localRecordUpdates.get(key) || {};
+              const value = e.target.value ? parseFloat(e.target.value) : null;
+              
+              await dataContext.updateDailyRecord({ 
+                ...record, 
+                ...mergedUpdates, 
+                temperature2: value 
+              });
+            }}
+            placeholder="22.0" 
+            className="w-14 px-1 py-1 text-xs border rounded" 
+          />
+        </td>
+        <td className="px-2 py-2">
+          <input 
+            type="number" 
+            step="0.1" 
+            value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'temperature3')} 
+            onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
+              temperature3: e.target.value ? parseFloat(e.target.value) : null
+            })}
+            onBlur={async (e) => {
+              const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
+              if (!record) return;
+              const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
+              const existingTimer = debounceTimers.current.get(key);
+              if (existingTimer) {
+                clearTimeout(existingTimer);
+                debounceTimers.current.delete(key);
+              }
+              const mergedUpdates = localRecordUpdates.get(key) || {};
+              const value = e.target.value ? parseFloat(e.target.value) : null;
+              
+              await dataContext.updateDailyRecord({ 
+                ...record, 
+                ...mergedUpdates, 
+                temperature3: value 
+              });
+            }}
+            placeholder="21.0" 
+            className="w-14 px-1 py-1 text-xs border rounded" 
+          />
+        </td>
+        <td className="px-2 py-2">
+          <input 
+            type="text" 
+            value={getDisplayRecordValue(shubo.primaryNumber, dayNum, 'memo')} 
+            onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
+              memo: e.target.value
+            })}
+            onBlur={async (e) => {
+              const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
+              if (!record) return;
+              const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
+              const existingTimer = debounceTimers.current.get(key);
+              if (existingTimer) {
+                clearTimeout(existingTimer);
+                debounceTimers.current.delete(key);
+              }
+              const mergedUpdates = localRecordUpdates.get(key) || {};
+              const value = e.target.value;
+              
+              await dataContext.updateDailyRecord({ 
+                ...record, 
+                ...mergedUpdates, 
+                memo: value 
+              });
+            }}
+            placeholder="順調" 
+            className="w-full px-2 py-1 text-xs border rounded" 
+          />
+        </td>
+      </tr>
+    );
+  })}
+</tbody>
                 </table>
               </div>
             )}
