@@ -643,7 +643,7 @@ const waterStr = formatRecipeValue('water', 'L');
 const lacticAcidStr = formatRecipeValue('lacticAcid', 'ml');
 
     // 仕込み情報
-    const brewingInput = brewingData[shubo.primaryNumber];
+    const brewingInput = brewingData[`${shubo.primaryNumber}-${shubo.fiscalYear}`];
     const brewingKensyaku = brewingInput?.afterBrewingKensyaku;
     const brewingCapacity = brewingKensyaku ? getCapacityFromKensyaku(shubo.selectedTankId, brewingKensyaku) : null;
     const brewingRatio = brewingCapacity && shubo.recipeData.measurement
@@ -651,14 +651,14 @@ const lacticAcidStr = formatRecipeValue('lacticAcid', 'ml');
       : null;
 
     // 卸し情報
-    const dischargeInputArray = shubo.shuboEndDates.map((_, index) => {
-      const key = `${shubo.primaryNumber}-${index + 1}`;
-      const input = dischargeData[key];
-      return input || {
-        beforeDischargeKensyaku: null,
-        afterDischargeCapacity: null
-      };
-    });
+const dischargeInputArray = shubo.shuboEndDates.map((_, index) => {
+  const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${index + 1}`;
+  const input = dischargeData[key];
+  return input || {
+    beforeDischargeKensyaku: null,
+    afterDischargeCapacity: null
+  };
+});
     
     // グラフ生成
     const graphWidth = 1100;
