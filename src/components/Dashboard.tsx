@@ -586,6 +586,27 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                               onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
                                 temperature1: e.target.value ? parseFloat(e.target.value) : null
                               })}
+                              onBlur={(e) => {
+                                const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
+                                if (!record) return;
+                                const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
+                                const existingTimer = debounceTimers.current.get(key);
+                                if (existingTimer) {
+                                  clearTimeout(existingTimer);
+                                  debounceTimers.current.delete(key);
+                                }
+                                const mergedUpdates = localRecordUpdates.get(key) || {};
+                                dataContext.updateDailyRecord({ 
+                                  ...record, 
+                                  ...mergedUpdates, 
+                                  temperature1: e.target.value ? parseFloat(e.target.value) : null 
+                                });
+                                setLocalRecordUpdates(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.delete(key);
+                                  return newMap;
+                                });
+                              }}
                               placeholder="20.5" 
                               className="w-14 px-1 py-1 text-xs border rounded" 
                             />
@@ -598,6 +619,27 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                               onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
                                 baume: e.target.value ? parseFloat(e.target.value) : null
                               })}
+                              onBlur={(e) => {
+                                const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
+                                if (!record) return;
+                                const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
+                                const existingTimer = debounceTimers.current.get(key);
+                                if (existingTimer) {
+                                  clearTimeout(existingTimer);
+                                  debounceTimers.current.delete(key);
+                                }
+                                const mergedUpdates = localRecordUpdates.get(key) || {};
+                                dataContext.updateDailyRecord({ 
+                                  ...record, 
+                                  ...mergedUpdates, 
+                                  baume: e.target.value ? parseFloat(e.target.value) : null 
+                                });
+                                setLocalRecordUpdates(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.delete(key);
+                                  return newMap;
+                                });
+                              }}
                               placeholder="10.5" 
                               className="w-14 px-1 py-1 text-xs border rounded" 
                             />
@@ -610,6 +652,27 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                               onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
                                 acidity: e.target.value ? parseFloat(e.target.value) : null
                               })}
+                              onBlur={(e) => {
+                                const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
+                                if (!record) return;
+                                const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
+                                const existingTimer = debounceTimers.current.get(key);
+                                if (existingTimer) {
+                                  clearTimeout(existingTimer);
+                                  debounceTimers.current.delete(key);
+                                }
+                                const mergedUpdates = localRecordUpdates.get(key) || {};
+                                dataContext.updateDailyRecord({ 
+                                  ...record, 
+                                  ...mergedUpdates, 
+                                  acidity: e.target.value ? parseFloat(e.target.value) : null 
+                                });
+                                setLocalRecordUpdates(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.delete(key);
+                                  return newMap;
+                                });
+                              }}
                               placeholder="2.5" 
                               className="w-14 px-1 py-1 text-xs border rounded" 
                             />
@@ -622,6 +685,27 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                               onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
                                 temperature2: e.target.value ? parseFloat(e.target.value) : null
                               })}
+                              onBlur={(e) => {
+                                const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
+                                if (!record) return;
+                                const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
+                                const existingTimer = debounceTimers.current.get(key);
+                                if (existingTimer) {
+                                  clearTimeout(existingTimer);
+                                  debounceTimers.current.delete(key);
+                                }
+                                const mergedUpdates = localRecordUpdates.get(key) || {};
+                                dataContext.updateDailyRecord({ 
+                                  ...record, 
+                                  ...mergedUpdates, 
+                                  temperature2: e.target.value ? parseFloat(e.target.value) : null 
+                                });
+                                setLocalRecordUpdates(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.delete(key);
+                                  return newMap;
+                                });
+                              }}
                               placeholder="22.0" 
                               className="w-14 px-1 py-1 text-xs border rounded" 
                             />
@@ -633,6 +717,27 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                               onChange={(e) => updateAnalysisRecord(shubo.primaryNumber, dayNum, {
                                 memo: e.target.value
                               })}
+                              onBlur={(e) => {
+                                const record = getTodayAnalysisRecord(shubo.primaryNumber, dayNum);
+                                if (!record) return;
+                                const key = `analysis-${shubo.primaryNumber}-${record.fiscalYear}-${dayNum}`;
+                                const existingTimer = debounceTimers.current.get(key);
+                                if (existingTimer) {
+                                  clearTimeout(existingTimer);
+                                  debounceTimers.current.delete(key);
+                                }
+                                const mergedUpdates = localRecordUpdates.get(key) || {};
+                                dataContext.updateDailyRecord({ 
+                                  ...record, 
+                                  ...mergedUpdates, 
+                                  memo: e.target.value 
+                                });
+                                setLocalRecordUpdates(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.delete(key);
+                                  return newMap;
+                                });
+                              }}
                               placeholder="順調" 
                               className="w-full px-2 py-1 text-xs border rounded" 
                             />
@@ -703,19 +808,43 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                             <td className="px-2 py-2 text-xs">{shubo.selectedTankId}</td>
                             <td className="px-2 py-2 text-xs">{waterDisplay}</td>
                             <td className="px-2 py-2">
-                              <input 
-                                type="number" 
-                                value={iceAmount} 
-                                onChange={(e) => updateBrewingInput(
+                            <input 
+                              type="number" 
+                              value={iceAmount} 
+                              onChange={(e) => updateBrewingInput(
+                                shubo.primaryNumber,
+                                shubo.fiscalYear,
+                                'iceAmount',
+                                e.target.value ? parseFloat(e.target.value) : null
+                              )}
+                              onBlur={async (e) => {
+                                const key = `${shubo.primaryNumber}-${shubo.fiscalYear}`;
+                                const timerKey = `brewing-prep-${key}`;
+                                const existingTimer = debounceTimers.current.get(timerKey);
+                                if (existingTimer) {
+                                  clearTimeout(existingTimer);
+                                  debounceTimers.current.delete(timerKey);
+                                }
+                                const mergedUpdates = localBrewingUpdates.get(key) || {};
+                                await dataContext.saveBrewingPreparation(
                                   shubo.primaryNumber,
                                   shubo.fiscalYear,
-                                  'iceAmount',
-                                  e.target.value ? parseFloat(e.target.value) : null
-                                )}
-                                placeholder="0" 
-                                className="w-14 px-1 py-1 text-xs border rounded" 
-                              />
-                            </td>
+                                  {
+                                    ...brewingInput[key],
+                                    ...mergedUpdates,
+                                    iceAmount: e.target.value ? parseFloat(e.target.value) : null
+                                  }
+                                );
+                                setLocalBrewingUpdates(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.delete(key);
+                                  return newMap;
+                                });
+                              }}
+                              placeholder="0" 
+                              className="w-14 px-1 py-1 text-xs border rounded" 
+                            />
+                          </td>
                             <td className="px-2 py-2 text-green-700 font-bold text-xs">
                               {iceAmount ? `${preparationWater}L` : '-'}
                             </td>
@@ -781,42 +910,108 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                             <td className="px-2 py-2 font-bold text-blue-700 text-xs">{shubo.displayName}</td>
                             <td className="px-2 py-2 text-xs">{shubo.selectedTankId}</td>
                             <td className="px-2 py-2">
-                              <input 
-                                type="number" 
-                                value={getDisplayRecordValue(shubo.primaryNumber, 1, 'temperature1')} 
-                                onChange={(e) => updateBrewingRecord(shubo.primaryNumber, {
-                                  temperature1: e.target.value ? parseFloat(e.target.value) : null
-                                })}
-                                placeholder="15" 
-                                className="w-12 px-1 py-1 text-xs border rounded" 
-                              />
-                            </td>
+                            <input 
+                              type="number" 
+                              value={getDisplayRecordValue(shubo.primaryNumber, 1, 'temperature1')} 
+                              onChange={(e) => updateBrewingRecord(shubo.primaryNumber, {
+                                temperature1: e.target.value ? parseFloat(e.target.value) : null
+                              })}
+                              onBlur={(e) => {
+                                const record = getDay1Record(shubo.primaryNumber);
+                                if (!record) return;
+                                const key = `brewing-${shubo.primaryNumber}-${record.fiscalYear}-1`;
+                                const existingTimer = debounceTimers.current.get(key);
+                                if (existingTimer) {
+                                  clearTimeout(existingTimer);
+                                  debounceTimers.current.delete(key);
+                                }
+                                const mergedUpdates = localRecordUpdates.get(key) || {};
+                                dataContext.updateDailyRecord({ 
+                                  ...record, 
+                                  ...mergedUpdates, 
+                                  temperature1: e.target.value ? parseFloat(e.target.value) : null 
+                                });
+                                setLocalRecordUpdates(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.delete(key);
+                                  return newMap;
+                                });
+                              }}
+                              placeholder="15" 
+                              className="w-12 px-1 py-1 text-xs border rounded" 
+                            />
+                          </td>
                             <td className="px-2 py-2">
-                              <input 
-                                type="number" 
-                                value={getDisplayRecordValue(shubo.primaryNumber, 1, 'temperature2')} 
-                                onChange={(e) => updateBrewingRecord(shubo.primaryNumber, {
-                                  temperature2: e.target.value ? parseFloat(e.target.value) : null
-                                })}
-                                placeholder="18" 
-                                className="w-12 px-1 py-1 text-xs border rounded" 
-                              />
-                            </td>
+                            <input 
+                              type="number" 
+                              value={getDisplayRecordValue(shubo.primaryNumber, 1, 'temperature2')} 
+                              onChange={(e) => updateBrewingRecord(shubo.primaryNumber, {
+                                temperature2: e.target.value ? parseFloat(e.target.value) : null
+                              })}
+                              onBlur={(e) => {
+                                const record = getDay1Record(shubo.primaryNumber);
+                                if (!record) return;
+                                const key = `brewing-${shubo.primaryNumber}-${record.fiscalYear}-1`;
+                                const existingTimer = debounceTimers.current.get(key);
+                                if (existingTimer) {
+                                  clearTimeout(existingTimer);
+                                  debounceTimers.current.delete(key);
+                                }
+                                const mergedUpdates = localRecordUpdates.get(key) || {};
+                                dataContext.updateDailyRecord({ 
+                                  ...record, 
+                                  ...mergedUpdates, 
+                                  temperature2: e.target.value ? parseFloat(e.target.value) : null 
+                                });
+                                setLocalRecordUpdates(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.delete(key);
+                                  return newMap;
+                                });
+                              }}
+                              placeholder="18" 
+                              className="w-12 px-1 py-1 text-xs border rounded" 
+                            />
+                          </td>
                             <td className="px-2 py-2 text-xs">{measurementDisplay}</td>
                             <td className="px-2 py-2">
-                              <input 
-                                type="number" 
-                                value={afterBrewingKensyaku} 
-                                onChange={(e) => updateBrewingInput(
+                            <input 
+                              type="number" 
+                              value={afterBrewingKensyaku} 
+                              onChange={(e) => updateBrewingInput(
+                                shubo.primaryNumber,
+                                shubo.fiscalYear,
+                                'afterBrewingKensyaku',
+                                e.target.value ? parseFloat(e.target.value) : null
+                              )}
+                              onBlur={async (e) => {
+                                const key = `${shubo.primaryNumber}-${shubo.fiscalYear}`;
+                                const timerKey = `brewing-prep-${key}`;
+                                const existingTimer = debounceTimers.current.get(timerKey);
+                                if (existingTimer) {
+                                  clearTimeout(existingTimer);
+                                  debounceTimers.current.delete(timerKey);
+                                }
+                                const mergedUpdates = localBrewingUpdates.get(key) || {};
+                                await dataContext.saveBrewingPreparation(
                                   shubo.primaryNumber,
                                   shubo.fiscalYear,
-                                  'afterBrewingKensyaku',
-                                  e.target.value ? parseFloat(e.target.value) : null
-                                )}
-                                placeholder="300" 
-                                className="w-14 px-1 py-1 text-xs border rounded" 
-                              />
-                            </td>
+                                  {
+                                    ...brewingInput[key],
+                                    ...mergedUpdates,
+                                    afterBrewingKensyaku: e.target.value ? parseFloat(e.target.value) : null
+                                  }
+                                );
+                                setLocalBrewingUpdates(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.delete(key);
+                                  return newMap;
+                                });
+                              }}
+                              placeholder="300" 
+                              className="w-14 px-1 py-1 text-xs border rounded" 
+                            />
+                          </td>
                             <td className="px-2 py-2 text-green-700 font-bold text-xs">
                               {capacity ? `${capacity}L` : '-'}
                             </td>
@@ -925,6 +1120,31 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                                 'beforeDischargeKensyaku',
                                 e.target.value ? parseFloat(e.target.value) : null
                               )}
+                              onBlur={async (e) => {
+                                const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${dischargeIndex + 1}`;
+                                const timerKey = `discharge-${key}`;
+                                const existingTimer = debounceTimers.current.get(timerKey);
+                                if (existingTimer) {
+                                  clearTimeout(existingTimer);
+                                  debounceTimers.current.delete(timerKey);
+                                }
+                                const mergedUpdates = localDischargeUpdates.get(key) || {};
+                                await dataContext.saveDischargeSchedule(
+                                  shubo.primaryNumber,
+                                  shubo.fiscalYear,
+                                  dischargeIndex + 1,
+                                  {
+                                    ...dischargeInput[key],
+                                    ...mergedUpdates,
+                                    beforeDischargeKensyaku: e.target.value ? parseFloat(e.target.value) : null
+                                  }
+                                );
+                                setLocalDischargeUpdates(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.delete(key);
+                                  return newMap;
+                                });
+                              }}
                               placeholder="250" 
                               className="w-16 px-2 py-1 text-sm border rounded" 
                             />
@@ -943,6 +1163,31 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                                 'afterDischargeCapacity',
                                 e.target.value !== '' ? parseFloat(e.target.value) : null
                               )}
+                              onBlur={async (e) => {
+                                const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${dischargeIndex + 1}`;
+                                const timerKey = `discharge-${key}`;
+                                const existingTimer = debounceTimers.current.get(timerKey);
+                                if (existingTimer) {
+                                  clearTimeout(existingTimer);
+                                  debounceTimers.current.delete(timerKey);
+                                }
+                                const mergedUpdates = localDischargeUpdates.get(key) || {};
+                                await dataContext.saveDischargeSchedule(
+                                  shubo.primaryNumber,
+                                  shubo.fiscalYear,
+                                  dischargeIndex + 1,
+                                  {
+                                    ...dischargeInput[key],
+                                    ...mergedUpdates,
+                                    afterDischargeCapacity: e.target.value !== '' ? parseFloat(e.target.value) : null
+                                  }
+                                );
+                                setLocalDischargeUpdates(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.delete(key);
+                                  return newMap;
+                                });
+                              }}
                               placeholder="200" 
                               className="w-16 px-2 py-1 text-sm border rounded" 
                             />
@@ -963,6 +1208,31 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                                 'destinationTank',
                                 e.target.value
                               )}
+                              onBlur={async (e) => {
+                                const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${dischargeIndex + 1}`;
+                                const timerKey = `discharge-${key}`;
+                                const existingTimer = debounceTimers.current.get(timerKey);
+                                if (existingTimer) {
+                                  clearTimeout(existingTimer);
+                                  debounceTimers.current.delete(timerKey);
+                                }
+                                const mergedUpdates = localDischargeUpdates.get(key) || {};
+                                await dataContext.saveDischargeSchedule(
+                                  shubo.primaryNumber,
+                                  shubo.fiscalYear,
+                                  dischargeIndex + 1,
+                                  {
+                                    ...dischargeInput[key],
+                                    ...mergedUpdates,
+                                    destinationTank: e.target.value
+                                  }
+                                );
+                                setLocalDischargeUpdates(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.delete(key);
+                                  return newMap;
+                                });
+                              }}
                               className="w-24 px-2 py-1 text-sm border rounded"
                             >
                               <option value="">選択</option>
@@ -988,6 +1258,31 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                                 'iceAmount',
                                 e.target.value ? parseFloat(e.target.value) : null
                               )}
+                              onBlur={async (e) => {
+                                const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${dischargeIndex + 1}`;
+                                const timerKey = `discharge-${key}`;
+                                const existingTimer = debounceTimers.current.get(timerKey);
+                                if (existingTimer) {
+                                  clearTimeout(existingTimer);
+                                  debounceTimers.current.delete(timerKey);
+                                }
+                                const mergedUpdates = localDischargeUpdates.get(key) || {};
+                                await dataContext.saveDischargeSchedule(
+                                  shubo.primaryNumber,
+                                  shubo.fiscalYear,
+                                  dischargeIndex + 1,
+                                  {
+                                    ...dischargeInput[key],
+                                    ...mergedUpdates,
+                                    iceAmount: e.target.value ? parseFloat(e.target.value) : null
+                                  }
+                                );
+                                setLocalDischargeUpdates(prev => {
+                                  const newMap = new Map(prev);
+                                  newMap.delete(key);
+                                  return newMap;
+                                });
+                              }}
                               placeholder="0" 
                               className="w-16 px-2 py-1 text-sm border rounded" 
                             />
