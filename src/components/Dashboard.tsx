@@ -44,7 +44,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
   const dischargeInput = dataContext.dischargeSchedule || {};
 
   const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial<DailyRecordData>>>(new Map());
-  const [localBrewingUpdates, setLocalBrewingUpdates] = useState<Map<string, any>>(new Map());
+  const [localBrewingUpdates] = useState<Map<string, any>>(new Map());
   const [localDischargeUpdates, setLocalDischargeUpdates] = useState<Map<string, any>>(new Map());
   const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
@@ -262,12 +262,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
   const updateBrewingInput = async (shuboNumber: number, fiscalYear: number, field: 'iceAmount' | 'afterBrewingKensyaku', value: number | null) => {
     const key = `${shuboNumber}-${fiscalYear}`;
     
-    setLocalBrewingUpdates(prev => {
-      const newMap = new Map(prev);
-      const existing = prev.get(key) || {};
-      newMap.set(key, { ...existing, [field]: value });
-      return newMap;
-    });
 
     const timerKey = `brewing-prep-${key}`;
     const existingTimer = debounceTimers.current.get(timerKey);
@@ -285,11 +279,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
         }
       );
       
-      setLocalBrewingUpdates(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(key);
-        return newMap;
-      });
       debounceTimers.current.delete(timerKey);
     }, 1500);
 
@@ -873,11 +862,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                                 const mergedUpdates = localBrewingUpdates.get(key) || {};
                                 const value = e.target.value ? parseFloat(e.target.value) : null;
                                 
-                                setLocalBrewingUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.set(key, { ...mergedUpdates, iceAmount: value });
-                                  return newMap;
-                                });
+                               
                                 
                                 await dataContext.saveBrewingPreparation(
                                   shubo.primaryNumber,
@@ -889,11 +874,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                                   }
                                 );
                                 
-                                setLocalBrewingUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.delete(key);
-                                  return newMap;
-                                });
+                             
                               }}
                               placeholder="0" 
                               className="w-14 px-1 py-1 text-xs border rounded" 
@@ -1067,11 +1048,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                                 const mergedUpdates = localBrewingUpdates.get(key) || {};
                                 const value = e.target.value ? parseFloat(e.target.value) : null;
                                 
-                                setLocalBrewingUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.set(key, { ...mergedUpdates, afterBrewingKensyaku: value });
-                                  return newMap;
-                                });
+                               
                                 
                                 await dataContext.saveBrewingPreparation(
                                   shubo.primaryNumber,
@@ -1083,11 +1060,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                                   }
                                 );
                                 
-                                setLocalBrewingUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.delete(key);
-                                  return newMap;
-                                });
+                              
                               }}
                               placeholder="300" 
                               className="w-14 px-1 py-1 text-xs border rounded" 
@@ -1300,13 +1273,15 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                           <td className="px-3 py-2">
                             <select
                               value={destinationTank}
-                              onChange={(e) => updateDischargeInput(
-                                shubo.primaryNumber,
-                                shubo.fiscalYear,
-                                dischargeIndex + 1,
-                                'destinationTank',
-                                e.target.value
-                              )}
+                              onChange={async (e) => {
+                                await updateDischargeInput(
+                                  shubo.primaryNumber,
+                                  shubo.fiscalYear,
+                                  dischargeIndex + 1,
+                                  'destinationTank',
+                                  e.target.value
+                                );
+                              }}
                               onBlur={async (e) => {
                                 const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${dischargeIndex + 1}`;
                                 const timerKey = `discharge-${key}`;
