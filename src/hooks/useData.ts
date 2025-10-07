@@ -34,20 +34,19 @@ const [dailyEnvironment, setDailyEnvironment] = useState<Record<string, { temper
 
   // 初回データ読み込み + リアルタイム購読
   useEffect(() => {
-    loadAllData()
+  loadAllData()
 
-    // リアルタイム購読
-    const channel = supabase
-      .channel('shubo_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shubo_raw_data' }, () => loadShuboRawData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shubo_configured_data' }, () => loadConfiguredShuboData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shubo_daily_records' }, () => loadDailyRecordsData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shubo_recipe_data' }, () => loadRecipeData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'shubo_tank_config' }, () => loadTankConfig())
-      .subscribe()
+  // const channel = supabase
+  //   .channel('shubo_realtime')
+  //   .on('postgres_changes', { event: '*', schema: 'public', table: 'shubo_raw_data' }, () => loadShuboRawData())
+  //   .on('postgres_changes', { event: '*', schema: 'public', table: 'shubo_configured_data' }, () => loadConfiguredShuboData())
+  //   .on('postgres_changes', { event: '*', schema: 'public', table: 'shubo_daily_records' }, () => loadDailyRecordsData())
+  //   .on('postgres_changes', { event: '*', schema: 'public', table: 'shubo_recipe_data' }, () => loadRecipeData())
+  //   .on('postgres_changes', { event: '*', schema: 'public', table: 'shubo_tank_config' }, () => loadTankConfig())
+  //   .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
-  }, [])
+  // return () => { supabase.removeChannel(channel) }
+}, [])
 
   // configuredShuboData変更時にmergedShuboData再生成
   useEffect(() => {
