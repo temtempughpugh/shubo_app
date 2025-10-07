@@ -7,12 +7,17 @@ export function calculateFiscalYear(date: Date): number {
   return month >= 6 ? year : year - 1;
 }
 
-// Excelシリアル値をJavaScript Dateに変換
 export function convertExcelDateToJs(excelDate: number): Date {
-  const days = Math.floor(excelDate);
-  const baseDate = new Date(1900, 0, 1);
+  let days = Math.floor(excelDate);
+  // Excelの1900年うるう年バグを考慮
+  // Excelは1900年2月29日(60日目)を存在するものとして扱う
+  // 60日目以降は実際には1日少ない
+  if (days > 60) {
+    days = days - 1;
+  }
+  const baseDate = new Date(1899, 11, 31); // 1899年12月31日
   const result = new Date(baseDate);
-  result.setDate(result.getDate() + (days - 1));
+  result.setDate(result.getDate() + days);
   result.setHours(0, 0, 0, 0);
   return result;
 }
