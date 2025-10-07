@@ -19,10 +19,13 @@ export function useSupabaseData() {
   const [dailyRecordsData, setDailyRecordsDataState] = useState<DailyRecordData[]>([])
   const [recipeRawData, setRecipeRawDataState] = useState<RecipeRawData[]>([])
   const [tankConfigData, setTankConfigDataState] = useState<TankConfigData[]>([])
+  
+  const [dailyEnvironment, setDailyEnvironment] = useState<Record<string, { temperature: string; humidity: string }>>({})
+const [brewingPreparation, setBrewingPreparation] = useState<Record<string, any>>({})
+const [dischargeSchedule, setDischargeSchedule] = useState<Record<string, any>>({})
   const [tankConversionMap, setTankConversionMap] = useState<Map<string, TankConversionRawData[]>>(new Map())
   const [analysisSettings, setAnalysisSettingsState] = useState<AnalysisSettings>(DEFAULT_ANALYSIS_SETTINGS)
   const [csvUpdateHistory, setCsvUpdateHistory] = useState<CSVUpdateHistory[]>([])
-  
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [currentFiscalYear, setCurrentFiscalYear] = useState<number>(() => calculateFiscalYear(new Date()))
@@ -39,15 +42,15 @@ export function useSupabaseData() {
       setLoadError(null)
 
       await Promise.all([
-        loadShuboRawData(),
-        loadConfiguredShuboData(),
-        loadDailyRecordsData(),
-        loadRecipeData(),
-        loadTankConfig(),
-        loadTankConversion(),
-        loadAnalysisSettings(),
-        loadCsvUpdateHistory()
-      ])
+  loadShuboRawData(),
+  loadConfiguredShuboData(),
+  loadDailyRecordsData(),
+  loadRecipeData(),
+  loadTankConfig(),
+  loadTankConversion(),
+  loadAnalysisSettings(),
+  loadCsvUpdateHistory()
+])
 
       console.log('全データ読み込み完了')
     } catch (error) {
@@ -349,84 +352,142 @@ async function loadConfiguredShuboData() {
     setTankConfigDataState(data)
   }
 
-  // === tank_conversion_data ===
-  async function loadTankConversion() {
-    const { data, error } = await supabase
-      .from('tank_conversion_data')
-      .select('*')
-
-    if (error) throw error
-
-    const tankMap = new Map<string, TankConversionRawData[]>()
-    
-    ;(data || []).forEach((row: any) => {
-      const conversion: TankConversionRawData = {
-        tankId: row.tank_id,
-        kensyaku: row.kensyaku,
-        capacity: row.capacity
-      }
-
-      if (!tankMap.has(row.tank_id)) {
-        tankMap.set(row.tank_id, [])
-      }
-      tankMap.get(row.tank_id)!.push(conversion)
-    })
-
-    setTankConversionMap(tankMap)
-  }
-
-  // === shubo_analysis_settings ===
-  // === shubo_analysis_settings ===
-async function loadAnalysisSettings() {
+ // === shubo_daily_environment ===
+// === shubo_daily_environment ===
+async function loadDailyEnvironment() {
   const { data, error } = await supabase
-    .from('shubo_analysis_settings')
+    .from('shubo_daily_environment')
     .select('*')
-    .eq('is_active', true)
-    .limit(1)
+    .order('date', { ascending: true })
 
-  // エラーコード PGRST116 は「データが見つからない」なので無視
   if (error && error.code !== 'PGRST116') {
-    console.warn('分析設定読み込みエラー:', error)
+    console.warn('日付別環境データ読み込みエラー:', error)
     return
   }
 
-  // データがある場合のみ設定
-  if (data && data.length > 0) {
-    setAnalysisSettingsState(data[0].settings as AnalysisSettings)
-  }
+  const converted: Record<string, { temperature: string; humidity: string }> = {}
+  
+  ;(data || []).forEach((row: any) => {
+    const dateKey = row.date
+    converted[dateKey] = {
+      temperature: row.temperature?.toString() || '',
+      humidity: row.humidity?.toString() || ''
+    }
+  })
+
+  setDailyEnvironment(converted)
 }
-  async function saveAnalysisSettings(settings: AnalysisSettings) {
-    const { error } = await supabase
-      .from('shubo_analysis_settings')
-      .upsert({
-        setting_type: 'main',
-        settings: settings as any,
-        is_active: true,
-        updated_at: new Date().toISOString()
-      })
 
-    if (error) throw error
-    setAnalysisSettingsState(settings)
+async function saveDailyEnvironment(dateKey: string, temperature: string, humidity: string) {
+  const { error } = await supabase
+    .from('shubo_daily_environment')
+    .upsert({
+      date: dateKey,
+      temperature: temperature ? parseFloat(temperature) : null,
+      humidity: humidity ? parseFloat(humidity) : null,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'date' })
+
+  if (error) throw error
+  
+  setDailyEnvironment(prev => ({
+    ...prev,
+    [dateKey]: { temperature, humidity }
+  }))
+}
+
+// === shubo_brewing_preparation ===
+async function loadBrewingPreparation() {
+  const { data, error } = await supabase
+    .from('shubo_brewing_preparation')
+    .select('*')
+
+  if (error && error.code !== 'PGRST116') {
+    console.warn('仕込み準備データ読み込みエラー:', error)
+    return
   }
 
-  // === shubo_csv_update_history ===
-  async function loadCsvUpdateHistory() {
-    const { data, error } = await supabase
-      .from('shubo_csv_update_history')
-      .select('*')
-      .order('executed_at', { ascending: false })
+  const converted: Record<string, any> = {}
+  
+  ;(data || []).forEach((row: any) => {
+    const key = `${row.shubo_number}-${row.fiscal_year}`
+    converted[key] = {
+      iceAmount: row.ice_amount,
+      afterBrewingKensyaku: row.after_brewing_kensyaku
+    }
+  })
 
-    if (error) throw error
+  setBrewingPreparation(converted)
+}
 
-    const converted: CSVUpdateHistory[] = (data || []).map((row: any) => ({
-      updateDate: new Date(row.update_date),
-      executedAt: new Date(row.executed_at),
-      updatedCount: row.updated_count,
-      keptCount: row.kept_count
-    }))
+async function saveBrewingPreparation(shuboNumber: number, fiscalYear: number, data: any) {
+  const { error } = await supabase
+    .from('shubo_brewing_preparation')
+    .upsert({
+      shubo_number: shuboNumber,
+      fiscal_year: fiscalYear,
+      ice_amount: data.iceAmount,
+      after_brewing_kensyaku: data.afterBrewingKensyaku,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'shubo_number,fiscal_year' })
 
-    setCsvUpdateHistory(converted)
+  if (error) throw error
+  
+  const key = `${shuboNumber}-${fiscalYear}`
+  setBrewingPreparation(prev => ({
+    ...prev,
+    [key]: data
+  }))
+}
+
+// === shubo_discharge_schedule ===
+async function loadDischargeSchedule() {
+  const { data, error } = await supabase
+    .from('shubo_discharge_schedule')
+    .select('*')
+
+  if (error && error.code !== 'PGRST116') {
+    console.warn('卸し予定データ読み込みエラー:', error)
+    return
   }
+
+  const converted: Record<string, any> = {}
+  
+  ;(data || []).forEach((row: any) => {
+    const key = `${row.shubo_number}-${row.fiscal_year}-${row.discharge_index}`
+    converted[key] = {
+      beforeDischargeKensyaku: row.before_discharge_kensyaku,
+      afterDischargeCapacity: row.after_discharge_capacity,
+      destinationTank: row.destination_tank || '',
+      iceAmount: row.ice_amount
+    }
+  })
+
+  setDischargeSchedule(converted)
+}
+
+async function saveDischargeSchedule(shuboNumber: number, fiscalYear: number, index: number, data: any) {
+  const { error } = await supabase
+    .from('shubo_discharge_schedule')
+    .upsert({
+      shubo_number: shuboNumber,
+      fiscal_year: fiscalYear,
+      discharge_index: index,
+      before_discharge_kensyaku: data.beforeDischargeKensyaku,
+      after_discharge_capacity: data.afterDischargeCapacity,
+      destination_tank: data.destinationTank,
+      ice_amount: data.iceAmount,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'shubo_number,fiscal_year,discharge_index' })
+
+  if (error) throw error
+  
+  const key = `${shuboNumber}-${fiscalYear}-${index}`
+  setDischargeSchedule(prev => ({
+    ...prev,
+    [key]: data
+  }))
+}
 
   // 年度フィルタリング済みデータ
   const filteredShuboRawData = useMemo(() => {
@@ -442,36 +503,42 @@ async function loadAnalysisSettings() {
   }, [dailyRecordsData, currentFiscalYear])
 
   return {
-    // データ
-    shuboRawData,
-    configuredShuboData,
-    dailyRecordsData,
-    recipeRawData,
-    tankConfigData,
-    tankConversionMap,
-    analysisSettings,
-    csvUpdateHistory,
+  // データ
+  shuboRawData,
+  configuredShuboData,
+  dailyRecordsData,
+  recipeRawData,
+  tankConfigData,
+  tankConversionMap,
+  analysisSettings,
+  csvUpdateHistory,
+  dailyEnvironment,
+  brewingPreparation,
+  dischargeSchedule,
 
-    // フィルタ済みデータ
-    filteredShuboRawData,
-    filteredConfiguredShuboData,
-    filteredDailyRecordsData,
+  // フィルタ済みデータ
+  filteredShuboRawData,
+  filteredConfiguredShuboData,
+  filteredDailyRecordsData,
 
-    // 保存関数
-    setShuboRawData: saveShuboRawData,
-    setConfiguredShuboData: saveConfiguredShuboData,
-    setDailyRecordsData: saveDailyRecordsData,
-    setRecipeRawData: saveRecipeData,
-    setTankConfigData: saveTankConfig,
-    setAnalysisSettings: saveAnalysisSettings,
+  // 保存関数
+  setShuboRawData: saveShuboRawData,
+  setConfiguredShuboData: saveConfiguredShuboData,
+  setDailyRecordsData: saveDailyRecordsData,
+  setRecipeRawData: saveRecipeData,
+  setTankConfigData: saveTankConfig,
+  setAnalysisSettings: saveAnalysisSettings,
+  saveDailyEnvironment,
+  saveBrewingPreparation,
+  saveDischargeSchedule,
 
-    // 状態
-    isLoading,
-    loadError,
-    currentFiscalYear,
-    setCurrentFiscalYear,
+  // 状態
+  isLoading,
+  loadError,
+  currentFiscalYear,
+  setCurrentFiscalYear,
 
-    // リロード
-    reloadData: loadAllData
-  }
+  // リロード
+  reloadData: loadAllData
+}
 }

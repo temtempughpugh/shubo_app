@@ -23,6 +23,9 @@ export function useData() {
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [currentFiscalYear, setCurrentFiscalYear] = useState<number>(() => calculateFiscalYear(new Date()))
+const [dailyEnvironment, setDailyEnvironment] = useState<Record<string, { temperature: string; humidity: string }>>({})
+  const [brewingPreparation, setBrewingPreparation] = useState<Record<string, any>>({})
+  const [dischargeSchedule, setDischargeSchedule] = useState<Record<string, any>>({})
 
   // 初回データ読み込み + リアルタイム購読
   useEffect(() => {
@@ -55,13 +58,16 @@ export function useData() {
     setLoadError(null)
 
     await Promise.all([
-      loadShuboRawData(),
-      loadConfiguredShuboData(),
-      loadDailyRecordsData(),
-      loadRecipeData(),
-      loadTankConfig(),
-      loadTankConversion()
-    ])
+  loadShuboRawData(),
+  loadConfiguredShuboData(),
+  loadDailyRecordsData(),
+  loadRecipeData(),
+  loadTankConfig(),
+  loadTankConversion(),
+  loadDailyEnvironment(),
+  loadBrewingPreparation(),
+  loadDischargeSchedule()
+])
 
     // データが空なら Supabase Storage からCSVインポート
   const needsImport = 
@@ -284,13 +290,138 @@ async function importFromSupabaseStorage() {
     setTankConfigDataState(data)
   }
 
-  async function loadTankConversion() {
+async function loadTankConversion() {
   const { loadCSV, parseTankConversionCSV } = await import('../utils/dataUtils')
   const tankCSV = await loadCSV('/data/tank_quick_reference.csv')
   const parsedMap = parseTankConversionCSV(tankCSV)
   setTankConversionMap(parsedMap)
 }
+// === shubo_daily_environment ===
+async function loadDailyEnvironment() {
+  const { data, error } = await supabase
+    .from('shubo_daily_environment')
+    .select('*')
+    .order('date', { ascending: true })
 
+  if (error && error.code !== 'PGRST116') throw error
+
+  const converted: Record<string, { temperature: string; humidity: string }> = {}
+  
+  ;(data || []).forEach((row: any) => {
+    const dateKey = row.date
+    converted[dateKey] = {
+      temperature: row.temperature?.toString() || '',
+      humidity: row.humidity?.toString() || ''
+    }
+  })
+
+  setDailyEnvironment(converted)
+}
+
+async function saveDailyEnvironment(dateKey: string, temperature: string, humidity: string) {
+  const { error } = await supabase
+    .from('shubo_daily_environment')
+    .upsert({
+      date: dateKey,
+      temperature: temperature ? parseFloat(temperature) : null,
+      humidity: humidity ? parseFloat(humidity) : null,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'date' })
+
+  if (error) throw error
+  
+  setDailyEnvironment(prev => ({
+    ...prev,
+    [dateKey]: { temperature, humidity }
+  }))
+}
+
+// === shubo_brewing_preparation ===
+async function loadBrewingPreparation() {
+  const { data, error } = await supabase
+    .from('shubo_brewing_preparation')
+    .select('*')
+
+  if (error && error.code !== 'PGRST116') throw error
+
+  const converted: Record<string, any> = {}
+  
+  ;(data || []).forEach((row: any) => {
+    const key = `${row.shubo_number}-${row.fiscal_year}`
+    converted[key] = {
+      iceAmount: row.ice_amount,
+      afterBrewingKensyaku: row.after_brewing_kensyaku
+    }
+  })
+
+  setBrewingPreparation(converted)
+}
+
+async function saveBrewingPreparation(shuboNumber: number, fiscalYear: number, data: any) {
+  const { error } = await supabase
+    .from('shubo_brewing_preparation')
+    .upsert({
+      shubo_number: shuboNumber,
+      fiscal_year: fiscalYear,
+      ice_amount: data.iceAmount,
+      after_brewing_kensyaku: data.afterBrewingKensyaku,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'shubo_number,fiscal_year' })
+
+  if (error) throw error
+  
+  const key = `${shuboNumber}-${fiscalYear}`
+  setBrewingPreparation(prev => ({
+    ...prev,
+    [key]: data
+  }))
+}
+
+// === shubo_discharge_schedule ===
+async function loadDischargeSchedule() {
+  const { data, error } = await supabase
+    .from('shubo_discharge_schedule')
+    .select('*')
+
+  if (error && error.code !== 'PGRST116') throw error
+
+  const converted: Record<string, any> = {}
+  
+  ;(data || []).forEach((row: any) => {
+    const key = `${row.shubo_number}-${row.fiscal_year}-${row.discharge_index}`
+    converted[key] = {
+      beforeDischargeKensyaku: row.before_discharge_kensyaku,
+      afterDischargeCapacity: row.after_discharge_capacity,
+      destinationTank: row.destination_tank || '',
+      iceAmount: row.ice_amount
+    }
+  })
+
+  setDischargeSchedule(converted)
+}
+
+async function saveDischargeSchedule(shuboNumber: number, fiscalYear: number, index: number, data: any) {
+  const { error } = await supabase
+    .from('shubo_discharge_schedule')
+    .upsert({
+      shubo_number: shuboNumber,
+      fiscal_year: fiscalYear,
+      discharge_index: index,
+      before_discharge_kensyaku: data.beforeDischargeKensyaku,
+      after_discharge_capacity: data.afterDischargeCapacity,
+      destination_tank: data.destinationTank,
+      ice_amount: data.iceAmount,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'shubo_number,fiscal_year,discharge_index' })
+
+  if (error) throw error
+  
+  const key = `${shuboNumber}-${fiscalYear}-${index}`
+  setDischargeSchedule(prev => ({
+    ...prev,
+    [key]: data
+  }))
+}
 
   const availableFiscalYears = useMemo(() => {
     const years = new Set<number>()
@@ -351,16 +482,22 @@ async function importFromSupabaseStorage() {
   }
 
   return {
-shuboRawData: shuboRawData.filter(s => s.fiscalYear === currentFiscalYear),  // ← 修正
+  shuboRawData: shuboRawData.filter(s => s.fiscalYear === currentFiscalYear),
   setShuboRawData: saveShuboRawData, 
   recipeRawData, 
   setRecipeRawData: saveRecipeData,
   tankConversionMap, 
-  configuredShuboData: filteredConfiguredShuboData,  // ← 修正
+  configuredShuboData: filteredConfiguredShuboData,
   setConfiguredShuboData: saveConfiguredShuboData,
-  mergedShuboData: filteredMergedShuboData,  // ← 修正
+  mergedShuboData: filteredMergedShuboData,
   tankConfigData, 
-  dailyRecordsData: filteredDailyRecordsData,  // ← 修正
+  dailyRecordsData: filteredDailyRecordsData,
+  dailyEnvironment,
+  brewingPreparation,
+  dischargeSchedule,
+  saveDailyEnvironment,
+  saveBrewingPreparation,
+  saveDischargeSchedule,
   currentFiscalYear, 
   setCurrentFiscalYear,
   availableFiscalYears, 
