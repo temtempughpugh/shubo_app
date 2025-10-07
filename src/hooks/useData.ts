@@ -522,12 +522,14 @@ async function saveAnalysisSettings(settings: AnalysisSettings) {
         fiscal_year: record.fiscalYear,
         day_number: record.dayNumber,
         record_date: record.recordDate.toISOString().split('T')[0],
+        time_slot: record.timeSlot || '1-1',
         temperature1: record.temperature1,
         temperature2: record.temperature2,
         temperature3: record.temperature3,
         baume: record.baume,
         acidity: record.acidity,
-        memo: record.memo
+        memo: record.memo,
+        updated_at: new Date().toISOString()
       }))
 
       const { error } = await supabase
@@ -535,6 +537,7 @@ async function saveAnalysisSettings(settings: AnalysisSettings) {
         .upsert(updates, {
           onConflict: 'shubo_number,fiscal_year,record_date,time_slot'
         })
+      
       if (error) throw error
       
       await loadDailyRecordsData()
