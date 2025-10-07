@@ -587,11 +587,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                 const mergedUpdates = localRecordUpdates.get(key) || {};
                                 const value = e.target.value ? parseFloat(e.target.value) : null;
                                 
-                                setLocalRecordUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.set(key, { ...mergedUpdates, temperature1: value });
-                                  return newMap;
-                                });
+                                
                                 
                                 await dataContext.updateDailyRecord({ 
                                   ...record, 
@@ -629,11 +625,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                 const mergedUpdates = localRecordUpdates.get(key) || {};
                                 const value = e.target.value ? parseFloat(e.target.value) : null;
                                 
-                                setLocalRecordUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.set(key, { ...mergedUpdates, baume: value });
-                                  return newMap;
-                                });
+                            
                                 
                                 await dataContext.updateDailyRecord({ 
                                   ...record, 
@@ -671,12 +663,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                 const mergedUpdates = localRecordUpdates.get(key) || {};
                                 const value = e.target.value ? parseFloat(e.target.value) : null;
                                 
-                                setLocalRecordUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.set(key, { ...mergedUpdates, acidity: value });
-                                  return newMap;
-                                });
-                                
+                              
                                 await dataContext.updateDailyRecord({ 
                                   ...record, 
                                   ...mergedUpdates, 
@@ -713,11 +700,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                 const mergedUpdates = localRecordUpdates.get(key) || {};
                                 const value = e.target.value ? parseFloat(e.target.value) : null;
                                 
-                                setLocalRecordUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.set(key, { ...mergedUpdates, temperature2: value });
-                                  return newMap;
-                                });
+                               
                                 
                                 await dataContext.updateDailyRecord({ 
                                   ...record, 
@@ -766,11 +749,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                   memo: value 
                                 });
                                 
-                                setLocalRecordUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.delete(key);
-                                  return newMap;
-                                });
+                            
                               }}
                               placeholder="順調" 
                               className="w-full px-2 py-1 text-xs border rounded" 
@@ -975,11 +954,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                   temperature1: value 
                                 });
                                 
-                                setLocalRecordUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.delete(key);
-                                  return newMap;
-                                });
+                                
                               }}
                               placeholder="15" 
                               className="w-12 px-1 py-1 text-xs border rounded" 
@@ -1016,11 +991,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                   temperature2: value 
                                 });
                                 
-                                setLocalRecordUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.delete(key);
-                                  return newMap;
-                                });
+                              
                               }}
                               placeholder="18" 
                               className="w-12 px-1 py-1 text-xs border rounded" 
@@ -1202,11 +1173,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                   }
                                 );
                                 
-                                setLocalDischargeUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.delete(key);
-                                  return newMap;
-                                });
+                            
                               }}
                               placeholder="250" 
                               className="w-16 px-2 py-1 text-sm border rounded" 
@@ -1254,11 +1221,6 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                   }
                                 );
                                 
-                                setLocalDischargeUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.delete(key);
-                                  return newMap;
-                                });
                               }}
                               placeholder="200" 
                               className="w-16 px-2 py-1 text-sm border rounded" 
@@ -1310,11 +1272,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                   }
                                 );
                                 
-                                setLocalDischargeUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.delete(key);
-                                  return newMap;
-                                });
+                              
                               }}
                               className="w-24 px-2 py-1 text-sm border rounded"
                             >
@@ -1369,11 +1327,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                                   }
                                 );
                                 
-                                setLocalDischargeUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.delete(key);
-                                  return newMap;
-                                });
+                           
                               }}
                               placeholder="0" 
                               className="w-16 px-2 py-1 text-sm border rounded" 
