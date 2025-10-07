@@ -14,6 +14,7 @@ interface ShuboDetailExpansionProps {
     afterDischargeCapacity: number | null;
   }[];
   getCapacityFromKensyaku?: (tankId: string, kensyaku: number) => number | null;
+  analysisSettings?: any;  // または AnalysisSettings 型
 }
 
 export default function ShuboDetailExpansion({
@@ -23,7 +24,8 @@ export default function ShuboDetailExpansion({
   onUpdateRecord,
   brewingInput,
   dischargeInput = [],
-  getCapacityFromKensyaku
+  getCapacityFromKensyaku,
+  analysisSettings
 }: ShuboDetailExpansionProps) {
   const [localRecords, setLocalRecords] = useState<DailyRecordData[]>(records);
   const tableRef = useRef<HTMLTableElement>(null);
@@ -521,8 +523,7 @@ const formatRecipeValue = (field: 'totalRice' | 'steamedRice' | 'kojiRice' | 'wa
                 <tr className="hover:bg-slate-50">
                   <td className="border border-slate-300 px-2 py-2 font-bold sticky left-0 bg-white z-10">ボーメ予測</td>
                   {(() => {
-                    const savedSettings = localStorage.getItem('shubo_analysis_settings');
-                    const settings = savedSettings ? JSON.parse(savedSettings) : null;
+                    const settings = analysisSettings;
                     const predictionSettings = settings?.baumePrediction;
                     
                     const recordsWithBaume = localRecords.filter(r => r.baume !== null && r.dayNumber >= 3);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { STORAGE_KEYS, DEFAULT_ANALYSIS_SETTINGS, type AnalysisSettings, type RecipeRawData } from '../utils/types';
+import { DEFAULT_ANALYSIS_SETTINGS, type AnalysisSettings, type RecipeRawData } from '../utils/types';
 
 interface AnalysisSettingsProps {
   onClose: () => void;
@@ -7,11 +7,16 @@ interface AnalysisSettingsProps {
 }
 
 export default function AnalysisSettings({ onClose, dataContext }: AnalysisSettingsProps) {
-  const [settings, setSettings] = useState<AnalysisSettings>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.ANALYSIS_SETTINGS);
-    return saved ? JSON.parse(saved) : DEFAULT_ANALYSIS_SETTINGS;
-  });
+   const [settings, setSettings] = useState<AnalysisSettings>(
+    dataContext.analysisSettings || DEFAULT_ANALYSIS_SETTINGS
+  );
 
+  useEffect(() => {
+    if (dataContext.analysisSettings) {
+      setSettings(dataContext.analysisSettings);
+    }
+  }, [dataContext.analysisSettings]);
+  
   // ========== ここから追加 ==========
   const [recipeData, setRecipeData] = useState<RecipeRawData[]>([]);
   const [selectedScale, setSelectedScale] = useState<number>(400);
@@ -23,7 +28,7 @@ const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 // 仕込み配合データの読み込み
 useEffect(() => {
   const loadRecipeData = async () => {
-    // 1. dataContext.recipeRawDataを最優先で確認
+    // dataContext.recipeRawDataから取得
     if (dataContext?.recipeRawData && dataContext.recipeRawData.length > 0) {
       setRecipeData(dataContext.recipeRawData);
       if (dataContext.recipeRawData.length > 0) {
@@ -32,19 +37,6 @@ useEffect(() => {
       }
       return;
     }
-
-    // 2. localStorageを確認
-    const saved = localStorage.getItem('shubo_recipe_data');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setRecipeData(parsed);
-      if (parsed.length > 0) {
-        setSelectedScale(parsed[0].recipeBrewingScale);
-        setSelectedType(parsed[0].shuboType);
-      }
-      return;
-    }
-
     // 3. どちらもなければエラー表示（CSVファイルは配置していないので読み込まない）
     console.warn('仕込み配合データが見つかりません');
   };
@@ -53,49 +45,54 @@ useEffect(() => {
 }, [dataContext?.recipeRawData]);
 
 const handleSaveChanges = async () => {
-  // 1. localStorageを更新
-  localStorage.setItem('shubo_recipe_data', JSON.stringify(recipeData));
-  
-  // 2. recipeRawDataを更新
-  if (dataContext?.setRecipeRawData) {
-    dataContext.setRecipeRawData(recipeData);
-  }
-  
-  // 3. configuredShuboDataを更新
-  if (dataContext?.configuredShuboData && dataContext?.setConfiguredShuboData) {
-    const updatedConfigured = dataContext.configuredShuboData.map((shubo: any) => {
-      const recipe = recipeData.find(r => 
-        r.shuboType === shubo.shuboType && 
-        r.recipeBrewingScale === shubo.originalData.brewingScale
-      );
-      if (recipe) {
-        return {
-          ...shubo,
-          recipeData: {
-            totalRice: recipe.recipeTotalRice,
-            steamedRice: recipe.steamedRice,
-            kojiRice: recipe.kojiRice,
-            water: recipe.water,
-            measurement: recipe.water + recipe.recipeTotalRice,
-            lacticAcid: recipe.lacticAcid
-          }
-        };
-      }
-      return shubo;
-    });
+  try {
+    // ❌ localStorage削除
+    // localStorage.setItem('shubo_recipe_data', JSON.stringify(recipeData));
     
-    dataContext.setConfiguredShuboData(updatedConfigured);
-    
-    // 4. mergedShuboDataも即座に更新（これを追加）
-    const { createMergedShuboData } = await import('../utils/dataUtils');
-    const merged = createMergedShuboData(updatedConfigured);
-    if (dataContext?.setMergedShuboData) {
-      dataContext.setMergedShuboData(merged);
+    // recipeRawDataを更新
+    if (dataContext?.setRecipeRawData) {
+      dataContext.setRecipeRawData(recipeData);
     }
+    
+    // configuredShuboDataを更新
+    if (dataContext?.configuredShuboData && dataContext?.setConfiguredShuboData) {
+      const updatedConfigured = dataContext.configuredShuboData.map((shubo: any) => {
+        const recipe = recipeData.find(r => 
+          r.shuboType === shubo.shuboType && 
+          r.recipeBrewingScale === shubo.originalData.brewingScale
+        );
+        if (recipe) {
+          return {
+            ...shubo,
+            recipeData: {
+              totalRice: recipe.recipeTotalRice,
+              steamedRice: recipe.steamedRice,
+              kojiRice: recipe.kojiRice,
+              water: recipe.water,
+              measurement: recipe.water + recipe.recipeTotalRice,
+              lacticAcid: recipe.lacticAcid
+            }
+          };
+        }
+        return shubo;
+      });
+      
+      dataContext.setConfiguredShuboData(updatedConfigured);
+      
+      // mergedShuboDataも即座に更新
+      const { createMergedShuboData } = await import('../utils/dataUtils');
+      const merged = createMergedShuboData(updatedConfigured);
+      if (dataContext?.setMergedShuboData) {
+        dataContext.setMergedShuboData(merged);
+      }
+    }
+    
+    setHasUnsavedChanges(false);
+    alert('変更を保存しました');
+  } catch (error) {
+    console.error('保存エラー:', error);
+    alert('保存に失敗しました');
   }
-  
-  setHasUnsavedChanges(false);
-  alert('変更を保存しました');
 };
   // ========== ここまで追加 ==========
   const toggleDay = (type: 'speed' | 'highTemp', day: number) => {
@@ -119,11 +116,19 @@ const handleSaveChanges = async () => {
           <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 flex items-center justify-between">
             <h2 className="text-2xl font-bold text-white">分析日設定</h2>
             <button
-              onClick={onClose}
-              className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-bold transition-all"
-            >
-              ← 戻る
-            </button>
+  onClick={async () => {
+    try {
+      await dataContext.saveAnalysisSettings(settings);
+      onClose();
+    } catch (error) {
+      console.error('設定保存エラー:', error);
+      alert('設定の保存に失敗しました');
+    }
+  }}
+  className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg font-bold transition-all"
+>
+  ← 戻る
+</button>
           </div>
 
           <div className="p-8 space-y-8">

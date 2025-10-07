@@ -1,11 +1,11 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import type {
   ConfiguredShuboData,
   DailyRecordData,
   MergedShuboData
 } from '../utils/types';
 import { Fragment } from 'react';
-import { STORAGE_KEYS, createShuboKey } from '../utils/types';
+import { createShuboKey } from '../utils/types';
 import ShuboDetailExpansion from './ShuboDetailExpansion';
 import { generateDailyRecords } from '../utils/dataUtils';
 
@@ -27,25 +27,18 @@ interface DashboardProps {
     saveDailyEnvironment: (dateKey: string, temperature: string, humidity: string) => Promise<void>;
     saveBrewingPreparation: (shuboNumber: number, fiscalYear: number, data: any) => Promise<void>;
     saveDischargeSchedule: (shuboNumber: number, fiscalYear: number, index: number, data: any) => Promise<void>;
+    analysisSettings: any;
   };
 }
 
-interface DailyEnvironment {
-  [dateKey: string]: {
-    temperature: string;
-    humidity: string;
-  };
-}
 
 export default function Dashboard({ dataContext }: DashboardProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [expandedShubo, setExpandedShubo] = useState<number | null>(null);
   
-  const [dailyEnvironment, setDailyEnvironment] = useState<DailyEnvironment>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.DAILY_ENVIRONMENT);
-    return saved ? JSON.parse(saved) : {};
-  });
+   const dailyEnvironment = dataContext.dailyEnvironment || {};
+
 
   const brewingInput = dataContext.brewingPreparation || {};
   const dischargeInput = dataContext.dischargeSchedule || {};
@@ -54,10 +47,6 @@ export default function Dashboard({ dataContext }: DashboardProps) {
   const [localBrewingUpdates, setLocalBrewingUpdates] = useState<Map<string, any>>(new Map());
   const [localDischargeUpdates, setLocalDischargeUpdates] = useState<Map<string, any>>(new Map());
   const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.DAILY_ENVIRONMENT, JSON.stringify(dailyEnvironment));
-  }, [dailyEnvironment]);
 
   const getDateKey = (date: Date): string => {
     return date.toISOString().split('T')[0];
@@ -469,29 +458,35 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                 <div className="flex items-center space-x-2">
                   <label className="text-sm font-bold text-slate-600">気温</label>
                   <input
-                    type="number"
-                    value={currentEnv.temperature}
-                    onChange={(e) => setDailyEnvironment({
-                      ...dailyEnvironment,
-                      [currentDateKey]: { ...currentEnv, temperature: e.target.value }
-                    })}
-                    placeholder="25"
-                    className="w-16 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+  type="number"
+  value={currentEnv.temperature}
+  onChange={(e) => {
+    dataContext.saveDailyEnvironment(
+      currentDateKey, 
+      e.target.value, 
+      currentEnv.humidity
+    );
+  }}
+  placeholder="25"
+  className="w-16 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+/>
                   <span className="text-sm text-slate-600">℃</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <label className="text-sm font-bold text-slate-600">湿度</label>
                   <input
-                    type="number"
-                    value={currentEnv.humidity}
-                    onChange={(e) => setDailyEnvironment({
-                      ...dailyEnvironment,
-                      [currentDateKey]: { ...currentEnv, humidity: e.target.value }
-                    })}
-                    placeholder="60"
-                    className="w-16 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+  type="number"
+  value={currentEnv.humidity}
+  onChange={(e) => {
+    dataContext.saveDailyEnvironment(
+      currentDateKey, 
+      currentEnv.temperature, 
+      e.target.value
+    );
+  }}
+  placeholder="60"
+  className="w-16 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+/>
                   <span className="text-sm text-slate-600">%</span>
                 </div>
               </div>
@@ -1095,6 +1090,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
                             })
                           }
                           getCapacityFromKensyaku={getCapacityFromKensyaku}
+                          analysisSettings={dataContext.analysisSettings}
                         />
                       )}
                     </Fragment>

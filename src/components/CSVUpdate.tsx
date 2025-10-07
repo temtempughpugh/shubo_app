@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { parseShuboCSV, convertExcelDateToJs, generateDailyRecords, updateDualShuboDisplayNames } from '../utils/dataUtils';
 import type { ShuboRawData, CSVUpdateHistory, MergedShuboData, DailyRecordData } from '../utils/types';
-import { STORAGE_KEYS } from '../utils/types';
 import { createShuboKey, parseShuboKey, type ShuboKey } from '../utils/types';
+import type { AnalysisSettings } from '../utils/types';
 
 interface CSVUpdateProps {
   dataContext: {
@@ -14,6 +14,19 @@ interface CSVUpdateProps {
     getDailyRecords: (shuboNumber: number, fiscalYear?: number) => DailyRecordData[];
     tankConversionMap: Map<string, any[]>;
     reloadData: () => Promise<void>;
+    csvUpdateHistory: CSVUpdateHistory[];
+    saveCSVUpdateHistory: (history: CSVUpdateHistory) => Promise<void>;
+    bulkUpdateDailyRecords: (records: DailyRecordData[]) => Promise<void>;
+    deleteBrewingPreparationByShuboKeys: (keys: string[]) => Promise<void>;
+    deleteDischargeScheduleByShuboKeys: (keys: string[]) => Promise<void>;
+    importAllData: (data: any) => Promise<void>;
+    brewingPreparation: Record<string, any>;
+    dischargeSchedule: Record<string, any>;
+    dailyEnvironment: Record<string, { temperature: string; humidity: string }>;
+    analysisSettings: AnalysisSettings;
+    recipeRawData: any[];
+    tankConfigData: any[];
+    dailyRecordsData: DailyRecordData[];
   };
   onClose: () => void;
 }
@@ -28,10 +41,7 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
 } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const [history, setHistory] = useState<CSVUpdateHistory[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.CSV_UPDATE_HISTORY);
-    return saved ? JSON.parse(saved) : [];
-  });
+  const history = dataContext.csvUpdateHistory || [];
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -111,234 +121,220 @@ newShuboData.forEach(shubo => {
   };
 
   const handleUpdate = async () => {
-    if (!preview || !selectedFile || !updateDate) return;
+  if (!preview || !selectedFile || !updateDate) return;
 
-    if (!confirm(`${preview.toUpdate.length}件の酒母を更新し、${preview.toKeep.length}件を保持します。よろしいですか？`)) {
-      return;
-    }
-
-    try {
-      setIsProcessing(true);
-
-      const text = await selectedFile.text();
-      const lines = text.split('\n').filter(line => line.trim());
-      const csvData = lines.map(line => line.split(','));
-      const newShuboData = parseShuboCSV(csvData);
-
-      const updateDateObj = new Date(updateDate);
-      updateDateObj.setHours(0, 0, 0, 0);
-
-      const currentShuboData = dataContext.shuboRawData;
-      const keptShuboData = currentShuboData.filter(shubo => {
-        const startDate = convertExcelDateToJs(parseFloat(shubo.shuboStartDate));
-        startDate.setHours(0, 0, 0, 0);
-        return startDate < updateDateObj;
-      });
-
-      const updatedShuboData = newShuboData.filter(shubo => {
-        const startDate = convertExcelDateToJs(parseFloat(shubo.shuboStartDate));
-        startDate.setHours(0, 0, 0, 0);
-        return startDate >= updateDateObj;
-      });
-
-      const mergedShuboData = [...keptShuboData, ...updatedShuboData].sort((a, b) => a.shuboNumber - b.shuboNumber);
-
-      localStorage.setItem(STORAGE_KEYS.SHUBO_RAW_DATA, JSON.stringify(mergedShuboData));
-      dataContext.setShuboRawData(mergedShuboData);
-
-      // configured_dataのマージ処理（手動設定を保持）
-// configured_dataのマージ処理（手動設定を保持）
-// configured_dataのマージ処理（手動設定を保持）
-const currentConfigured = dataContext.configuredShuboData;
-
-// 更新日より前のデータは保持
-const keptConfigured = currentConfigured.filter(c => 
-  !preview.toUpdate.includes(createShuboKey(c.shuboNumber, c.fiscalYear))
-);
-
-const updatedConfigured = preview.toUpdate.map(key => {
-  const { shuboNumber, fiscalYear } = parseShuboKey(key);
-  const existing = currentConfigured.find(c => 
-    c.shuboNumber === shuboNumber && c.fiscalYear === fiscalYear
-  );
-  const newRaw = newShuboData.find(s => 
-    s.shuboNumber === shuboNumber && s.fiscalYear === fiscalYear
-  );
-  
-  if (!newRaw) return null;
-  
-  if (existing) {
-    return {
-      ...existing,
-      shuboStartDate: convertExcelDateToJs(parseFloat(newRaw.shuboStartDate)),
-      shuboEndDate: convertExcelDateToJs(parseFloat(newRaw.shuboEndDate)),
-      shuboDays: newRaw.shuboDays,
-      fiscalYear: newRaw.fiscalYear,
-      originalData: newRaw,
-    };
+  if (!confirm(`${preview.toUpdate.length}件の酒母を更新し、${preview.toKeep.length}件を保持します。よろしいですか？`)) {
+    return;
   }
-  
-  return null;
-}).filter(Boolean);
 
-const mergedConfigured = [...keptConfigured, ...updatedConfigured];
+  try {
+    setIsProcessing(true);
 
-// dualShuboInfoとdisplayNameを再計算
-const updatedWithDualInfo = updateDualShuboDisplayNames(mergedConfigured);
+    const text = await selectedFile.text();
+    const lines = text.split('\n').filter(line => line.trim());
+    const csvData = lines.map(line => line.split(','));
+    const newShuboData = parseShuboCSV(csvData);
 
-// localStorageに保存
-localStorage.setItem(STORAGE_KEYS.CONFIGURED_SHUBO_DATA, JSON.stringify(updatedWithDualInfo));
+    const updateDateObj = new Date(updateDate);
+    updateDateObj.setHours(0, 0, 0, 0);
 
-// Reactのstateを直接更新（これが重要！）
-dataContext.setConfiguredShuboData(updatedWithDualInfo);
+    const currentShuboData = dataContext.shuboRawData;
+    const keptShuboData = currentShuboData.filter(shubo => {
+      const startDate = convertExcelDateToJs(parseFloat(shubo.shuboStartDate));
+      startDate.setHours(0, 0, 0, 0);
+      return startDate < updateDateObj;
+    });
 
-      // daily_recordsのマージ処理（入力データを保持）
-const dailyRecords = JSON.parse(localStorage.getItem(STORAGE_KEYS.DAILY_RECORDS_DATA) || '[]');
+    const updatedShuboData = newShuboData.filter(shubo => {
+      const startDate = convertExcelDateToJs(parseFloat(shubo.shuboStartDate));
+      startDate.setHours(0, 0, 0, 0);
+      return startDate >= updateDateObj;
+    });
 
-// 更新日より前のデータは保持
-const keptRecords = dailyRecords.filter((r: any) => 
-  !preview.toUpdate.includes(createShuboKey(r.shuboNumber, r.fiscalYear))
-);
+    const mergedShuboData = [...keptShuboData, ...updatedShuboData].sort((a, b) => a.shuboNumber - b.shuboNumber);
 
-const updatedRecords = dailyRecords.filter((r: any) => 
-  preview.toUpdate.includes(createShuboKey(r.shuboNumber, r.fiscalYear))
-).map((record: any) => {
-  const newRaw = newShuboData.find(s => 
-    s.shuboNumber === record.shuboNumber && s.fiscalYear === record.fiscalYear
-  );
-  if (!newRaw) return null;
-  
-  const newStartDate = convertExcelDateToJs(parseFloat(newRaw.shuboStartDate));
-  const newEndDate = convertExcelDateToJs(parseFloat(newRaw.shuboEndDate));
-  
-  const recordDate = new Date(record.recordDate);
-  recordDate.setHours(0, 0, 0, 0);
-  newStartDate.setHours(0, 0, 0, 0);
-  newEndDate.setHours(0, 0, 0, 0);
-  
-  if (recordDate >= newStartDate && recordDate <= newEndDate) {
-    return {
-      ...record,
-      fiscalYear: newRaw.fiscalYear
+    // ✅ localStorage削除 - Supabaseのみに保存
+    dataContext.setShuboRawData(mergedShuboData);
+
+    // configured_dataのマージ処理
+    const currentConfigured = dataContext.configuredShuboData;
+    const keptConfigured = currentConfigured.filter(c => 
+      !preview.toUpdate.includes(createShuboKey(c.shuboNumber, c.fiscalYear))
+    );
+
+    const updatedConfigured = preview.toUpdate.map(key => {
+      const { shuboNumber, fiscalYear } = parseShuboKey(key);
+      const existing = currentConfigured.find(c => 
+        c.shuboNumber === shuboNumber && c.fiscalYear === fiscalYear
+      );
+      const newRaw = newShuboData.find(s => 
+        s.shuboNumber === shuboNumber && s.fiscalYear === fiscalYear
+      );
+      
+      if (!newRaw) return null;
+      
+      if (existing) {
+        return {
+          ...existing,
+          shuboStartDate: convertExcelDateToJs(parseFloat(newRaw.shuboStartDate)),
+          shuboEndDate: convertExcelDateToJs(parseFloat(newRaw.shuboEndDate)),
+          shuboDays: newRaw.shuboDays,
+          fiscalYear: newRaw.fiscalYear,
+          originalData: newRaw,
+        };
+      }
+      
+      return null;
+    }).filter(Boolean);
+
+    const mergedConfigured = [...keptConfigured, ...updatedConfigured];
+    const updatedWithDualInfo = updateDualShuboDisplayNames(mergedConfigured);
+
+    // ✅ localStorage削除 - Supabaseのみに保存
+    dataContext.setConfiguredShuboData(updatedWithDualInfo);
+
+    // daily_recordsのマージ処理
+    const dailyRecords = dataContext.dailyRecordsData;
+    const keptRecords = dailyRecords.filter((r: any) => 
+      !preview.toUpdate.includes(createShuboKey(r.shuboNumber, r.fiscalYear))
+    );
+
+    const updatedRecords = dailyRecords.filter((r: any) => 
+      preview.toUpdate.includes(createShuboKey(r.shuboNumber, r.fiscalYear))
+    ).map((record: any) => {
+      const newRaw = newShuboData.find(s => 
+        s.shuboNumber === record.shuboNumber && s.fiscalYear === record.fiscalYear
+      );
+      if (!newRaw) return null;
+      
+      const newStartDate = convertExcelDateToJs(parseFloat(newRaw.shuboStartDate));
+      const newEndDate = convertExcelDateToJs(parseFloat(newRaw.shuboEndDate));
+      
+      const recordDate = new Date(record.recordDate);
+      recordDate.setHours(0, 0, 0, 0);
+      newStartDate.setHours(0, 0, 0, 0);
+      newEndDate.setHours(0, 0, 0, 0);
+      
+      if (recordDate >= newStartDate && recordDate <= newEndDate) {
+        return {
+          ...record,
+          fiscalYear: newRaw.fiscalYear
+        };
+      }
+      
+      return null;
+    }).filter(Boolean);
+
+    const mergedRecords = [...keptRecords, ...updatedRecords];
+    
+    // ✅ localStorage削除 - Supabaseに保存
+    await dataContext.bulkUpdateDailyRecords(mergedRecords);
+
+    // brewing_preparationとdischarge_scheduleの削除
+    // ✅ localStorage削除 - Supabaseから削除
+    await dataContext.deleteBrewingPreparationByShuboKeys(preview.toUpdate);
+    await dataContext.deleteDischargeScheduleByShuboKeys(preview.toUpdate);
+
+    // 更新履歴の保存
+    const newHistory: CSVUpdateHistory = {
+      updateDate: new Date(updateDate),
+      executedAt: new Date(),
+      updatedCount: preview.toUpdate.length,
+      keptCount: preview.toKeep.length
     };
-  }
-  
-  return null;
-}).filter(Boolean);
+    
+    // ✅ localStorage削除 - Supabaseに保存
+    await dataContext.saveCSVUpdateHistory(newHistory);
 
-const mergedRecords = [...keptRecords, ...updatedRecords];
-localStorage.setItem(STORAGE_KEYS.DAILY_RECORDS_DATA, JSON.stringify(mergedRecords));
+    alert('CSV更新が完了しました');
+    setPreview(null);
+    setSelectedFile(null);
+    setUpdateDate('');
 
-      // brewing_preparationとdischarge_scheduleのクリーンアップ
-      const brewingData = JSON.parse(localStorage.getItem(STORAGE_KEYS.BREWING_PREPARATION) || '{}');
-      const dischargeData = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCHARGE_SCHEDULE) || '{}');
-
-      // 更新対象の酒母のデータを削除
-      preview.toUpdate.forEach(key => {
-  delete brewingData[key];
-});
-
-// dischargeDataのクリーンアップ
-preview.toUpdate.forEach(key => {
-  Object.keys(dischargeData).forEach(dischargeKey => {
-    if (dischargeKey.startsWith(`${key}-`)) {
-      delete dischargeData[dischargeKey];
-    }
-  });
-});
-      localStorage.setItem(STORAGE_KEYS.BREWING_PREPARATION, JSON.stringify(brewingData));
-      localStorage.setItem(STORAGE_KEYS.DISCHARGE_SCHEDULE, JSON.stringify(dischargeData));
-
-      const newHistory: CSVUpdateHistory = {
-        updateDate: new Date(updateDate),
-        executedAt: new Date(),
-        updatedCount: preview.toUpdate.length,
-        keptCount: preview.toKeep.length
-      };
-      const updatedHistory = [newHistory, ...history];
-      localStorage.setItem(STORAGE_KEYS.CSV_UPDATE_HISTORY, JSON.stringify(updatedHistory));
-      setHistory(updatedHistory);
-
-      alert('CSV更新が完了しました');
-      setPreview(null);
-      setSelectedFile(null);
-      setUpdateDate('');
-
-    } catch (error) {
-      console.error('更新エラー:', error);
-      alert('更新に失敗しました');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleExport = () => {
-    try {
-      const exportData = {
-  exportDate: new Date().toISOString(),
-  version: '1.0',
-  data: {
-    shubo_raw_data: localStorage.getItem(STORAGE_KEYS.SHUBO_RAW_DATA),
-    shubo_recipe_data: localStorage.getItem('shubo_recipe_data'),  // 追加
-    shubo_configured_data: localStorage.getItem(STORAGE_KEYS.CONFIGURED_SHUBO_DATA),
-    shubo_daily_records: localStorage.getItem(STORAGE_KEYS.DAILY_RECORDS_DATA),
-    shubo_tank_config: localStorage.getItem(STORAGE_KEYS.TANK_CONFIG_DATA),
-    shubo_analysis_settings: localStorage.getItem(STORAGE_KEYS.ANALYSIS_SETTINGS),
-    shubo_csv_update_history: localStorage.getItem(STORAGE_KEYS.CSV_UPDATE_HISTORY),
-    shubo_daily_environment: localStorage.getItem(STORAGE_KEYS.DAILY_ENVIRONMENT),
-    shubo_brewing_preparation: localStorage.getItem(STORAGE_KEYS.BREWING_PREPARATION),  // 追加
-    shubo_discharge_schedule: localStorage.getItem(STORAGE_KEYS.DISCHARGE_SCHEDULE),  // 追加
+  } catch (error) {
+    console.error('更新エラー:', error);
+    alert('更新に失敗しました');
+  } finally {
+    setIsProcessing(false);
   }
 };
 
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
-      a.href = url;
-      a.download = `shubo_backup_${dateStr}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+  // ❌ 既存のhandleExport関数を削除して、以下に置き換え
 
-      alert('バックアップファイルをダウンロードしました');
-    } catch (error) {
-      console.error('エクスポートエラー:', error);
-      alert('エクスポートに失敗しました');
-    }
-  };
+const handleExport = () => {
+  try {
+    const exportData = {
+      exportDate: new Date().toISOString(),
+      version: '1.0',
+      data: {
+        shubo_raw_data: JSON.stringify(dataContext.shuboRawData),
+        shubo_recipe_data: JSON.stringify(dataContext.recipeRawData),
+        shubo_configured_data: JSON.stringify(dataContext.configuredShuboData),
+        shubo_daily_records: JSON.stringify(dataContext.dailyRecordsData),
+        shubo_tank_config: JSON.stringify(dataContext.tankConfigData),
+        shubo_analysis_settings: JSON.stringify(dataContext.analysisSettings),
+        shubo_csv_update_history: JSON.stringify(dataContext.csvUpdateHistory),
+        shubo_daily_environment: JSON.stringify(dataContext.dailyEnvironment),
+        shubo_brewing_preparation: JSON.stringify(dataContext.brewingPreparation),
+        shubo_discharge_schedule: JSON.stringify(dataContext.dischargeSchedule),
+      }
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    a.href = url;
+    a.download = `shubo_backup_${dateStr}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    alert('バックアップファイルをダウンロードしました');
+  } catch (error) {
+    console.error('エクスポートエラー:', error);
+    alert('エクスポートに失敗しました');
+  }
+};
 
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const file = e.target.files?.[0];
+  if (!file) return;
 
-    if (!confirm('現在のデータは全て上書きされます。続行しますか？')) {
-      e.target.value = '';
-      return;
+  if (!confirm('現在のデータは全て上書きされます。続行しますか？')) {
+    e.target.value = '';
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    const importData = JSON.parse(text);
+
+    if (!importData.data) {
+      throw new Error('無効なバックアップファイルです');
     }
 
-    try {
-      const text = await file.text();
-      const importData = JSON.parse(text);
+    // ✅ localStorage削除 - Supabaseに直接インポート
+    await dataContext.importAllData({
+      shuboRawData: JSON.parse(importData.data.shubo_raw_data),
+      recipeRawData: JSON.parse(importData.data.shubo_recipe_data),
+      configuredShuboData: JSON.parse(importData.data.shubo_configured_data),
+      dailyRecordsData: JSON.parse(importData.data.shubo_daily_records),
+      tankConfigData: JSON.parse(importData.data.shubo_tank_config),
+      analysisSettings: JSON.parse(importData.data.shubo_analysis_settings),
+      csvUpdateHistory: JSON.parse(importData.data.shubo_csv_update_history),
+      dailyEnvironment: JSON.parse(importData.data.shubo_daily_environment),
+      brewingPreparation: JSON.parse(importData.data.shubo_brewing_preparation),
+      dischargeSchedule: JSON.parse(importData.data.shubo_discharge_schedule),
+    });
 
-      if (!importData.data) {
-        throw new Error('無効なバックアップファイルです');
-      }
-
-      Object.entries(importData.data).forEach(([key, value]) => {
-        if (value) {
-          localStorage.setItem(key, value as string);
-        }
-      });
-
-      alert('データを復元しました。ページをリロードします。');
-      window.location.reload();
-    } catch (error) {
-      console.error('インポートエラー:', error);
-      alert('インポートに失敗しました。ファイルが正しいか確認してください。');
-    } finally {
-      e.target.value = '';
-    }
-  };
+    alert('データを復元しました');
+  } catch (error) {
+    console.error('インポートエラー:', error);
+    alert('インポートに失敗しました。ファイルが正しいか確認してください。');
+  } finally {
+    e.target.value = '';
+  }
+};
 
   const handleHTMLExport = () => {
   try {
@@ -349,10 +345,10 @@ preview.toUpdate.forEach(key => {
       return;
     }
 
-    const brewingData = JSON.parse(localStorage.getItem(STORAGE_KEYS.BREWING_PREPARATION) || '{}');
-    const dischargeData = JSON.parse(localStorage.getItem(STORAGE_KEYS.DISCHARGE_SCHEDULE) || '{}');
-    const envData = JSON.parse(localStorage.getItem(STORAGE_KEYS.DAILY_ENVIRONMENT) || '{}');
-
+    const brewingData = dataContext.brewingPreparation;
+    const dischargeData = dataContext.dischargeSchedule;
+    const envData = dataContext.dailyEnvironment;
+    
     const html = generateShuboListHTML(
       shubos, 
       dataContext.getDailyRecords,

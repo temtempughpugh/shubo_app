@@ -2,14 +2,17 @@ import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 import type { 
   ShuboRawData, 
-  ConfiguredShuboData,
+  ConfiguredShuboData, 
+  MergedShuboData, 
   DailyRecordData,
   RecipeRawData,
   TankConfigData,
   TankConversionRawData,
-  MergedShuboData
+  CSVUpdateHistory,
+  AnalysisSettings
 } from '../utils/types'
 import { calculateFiscalYear, createMergedShuboData } from '../utils/dataUtils'
+import { DEFAULT_ANALYSIS_SETTINGS } from '../utils/types'
 
 export function useData() {
   const [shuboRawData, setShuboRawDataState] = useState<ShuboRawData[]>([])
@@ -22,6 +25,8 @@ export function useData() {
   
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [analysisSettings, setAnalysisSettings] = useState<AnalysisSettings>(DEFAULT_ANALYSIS_SETTINGS)
+  const [csvUpdateHistory, setCsvUpdateHistory] = useState<CSVUpdateHistory[]>([])
   const [currentFiscalYear, setCurrentFiscalYear] = useState<number>(() => calculateFiscalYear(new Date()))
 const [dailyEnvironment, setDailyEnvironment] = useState<Record<string, { temperature: string; humidity: string }>>({})
   const [brewingPreparation, setBrewingPreparation] = useState<Record<string, any>>({})
@@ -66,7 +71,9 @@ const [dailyEnvironment, setDailyEnvironment] = useState<Record<string, { temper
   loadTankConversion(),
   loadDailyEnvironment(),
   loadBrewingPreparation(),
-  loadDischargeSchedule()
+  loadDischargeSchedule(),
+   loadAnalysisSettings(),
+        loadCSVUpdateHistory()
 ])
 
     // データが空なら Supabase Storage からCSVインポート
@@ -280,7 +287,7 @@ async function importFromSupabaseStorage() {
     })))
   }
 
-  async function saveTankConfig(data: TankConfigData[]) {
+async function saveTankConfig(data: TankConfigData[]) {
     const { error } = await supabase.from('shubo_tank_config').upsert(data.map(t => ({
       tank_id: t.tankId, display_name: t.displayName, max_capacity: t.maxCapacity, is_enabled: t.isEnabled,
       is_recommended: t.isRecommended, current_status: t.currentStatus,
@@ -399,6 +406,48 @@ async function loadDischargeSchedule() {
 
   setDischargeSchedule(converted)
 }
+async function loadAnalysisSettings() {
+    try {
+      const { data, error } = await supabase
+        .from('shubo_analysis_settings')
+        .select('*')
+        .single()
+      
+      if (error) {
+        console.log('分析設定が見つかりません。デフォルト値を使用します')
+        return
+      }
+      
+      if (data) {
+        setAnalysisSettings(data.settings)
+      }
+    } catch (error) {
+      console.error('分析設定読み込みエラー:', error)
+    }
+  }
+
+  async function loadCSVUpdateHistory() {
+    try {
+      const { data, error } = await supabase
+        .from('shubo_csv_update_history')
+        .select('*')
+        .order('executed_at', { ascending: false })
+      
+      if (error) throw error
+      
+      if (data) {
+        const histories = data.map(d => ({
+          updateDate: new Date(d.update_date),
+          executedAt: new Date(d.executed_at),
+          updatedCount: d.updated_count,
+          keptCount: d.kept_count
+        }))
+        setCsvUpdateHistory(histories)
+      }
+    } catch (error) {
+      console.error('CSV更新履歴読み込みエラー:', error)
+    }
+  }
 
 async function saveDischargeSchedule(shuboNumber: number, fiscalYear: number, index: number, data: any) {
   const { error } = await supabase
@@ -422,6 +471,168 @@ async function saveDischargeSchedule(shuboNumber: number, fiscalYear: number, in
     [key]: data
   }))
 }
+
+async function saveAnalysisSettings(settings: AnalysisSettings) {
+    try {
+      const { error } = await supabase
+        .from('shubo_analysis_settings')
+        .upsert({ id: 1, settings }, { onConflict: 'id' })
+      
+      if (error) throw error
+      setAnalysisSettings(settings)
+    } catch (error) {
+      console.error('分析設定保存エラー:', error)
+      throw error
+    }
+  }
+
+  async function saveCSVUpdateHistory(history: CSVUpdateHistory) {
+    try {
+      const { error } = await supabase
+        .from('shubo_csv_update_history')
+        .insert({
+          update_date: history.updateDate.toISOString(),
+          executed_at: history.executedAt.toISOString(),
+          updated_count: history.updatedCount,
+          kept_count: history.keptCount
+        })
+      
+      if (error) throw error
+      
+      setCsvUpdateHistory(prev => [history, ...prev])
+    } catch (error) {
+      console.error('CSV更新履歴保存エラー:', error)
+      throw error
+    }
+  }
+
+  async function bulkUpdateDailyRecords(records: DailyRecordData[]) {
+    try {
+      const updates = records.map(record => ({
+        shubo_number: record.shuboNumber,
+        fiscal_year: record.fiscalYear,
+        day_number: record.dayNumber,
+        record_date: record.recordDate.toISOString().split('T')[0],
+        temperature1: record.temperature1,
+        temperature2: record.temperature2,
+        temperature3: record.temperature3,
+        baume: record.baume,
+        acidity: record.acidity,
+        memo: record.memo
+      }))
+
+      const { error } = await supabase
+        .from('shubo_daily_records')
+        .upsert(updates, {
+          onConflict: 'shubo_number,fiscal_year,day_number'
+        })
+      
+      if (error) throw error
+      
+      await loadDailyRecordsData()
+    } catch (error) {
+      console.error('日別記録一括更新エラー:', error)
+      throw error
+    }
+  }
+
+  async function deleteBrewingPreparationByShuboKeys(keys: string[]) {
+    try {
+      for (const key of keys) {
+        const parts = key.split('-')
+        const shuboNumber = parseInt(parts[0])
+        const fiscalYear = parseInt(parts[1])
+        
+        const { error } = await supabase
+          .from('shubo_brewing_preparation')
+          .delete()
+          .eq('shubo_number', shuboNumber)
+          .eq('fiscal_year', fiscalYear)
+        
+        if (error) throw error
+      }
+      
+      await loadBrewingPreparation()
+    } catch (error) {
+      console.error('仕込み準備削除エラー:', error)
+      throw error
+    }
+  }
+
+  async function deleteDischargeScheduleByShuboKeys(keys: string[]) {
+    try {
+      for (const key of keys) {
+        const parts = key.split('-')
+        const shuboNumber = parseInt(parts[0])
+        const fiscalYear = parseInt(parts[1])
+        
+        const { error } = await supabase
+          .from('shubo_discharge_schedule')
+          .delete()
+          .eq('shubo_number', shuboNumber)
+          .eq('fiscal_year', fiscalYear)
+        
+        if (error) throw error
+      }
+      
+      await loadDischargeSchedule()
+    } catch (error) {
+      console.error('卸し予定削除エラー:', error)
+      throw error
+    }
+  }
+
+  async function importAllData(data: {
+    shuboRawData: ShuboRawData[]
+    recipeRawData: RecipeRawData[]
+    configuredShuboData: ConfiguredShuboData[]
+    dailyRecordsData: DailyRecordData[]
+    tankConfigData: TankConfigData[]
+    analysisSettings: AnalysisSettings
+    csvUpdateHistory: CSVUpdateHistory[]
+    dailyEnvironment: Record<string, { temperature: string; humidity: string }>
+    brewingPreparation: Record<string, any>
+    dischargeSchedule: Record<string, any>
+  }) {
+    try {
+      await saveShuboRawData(data.shuboRawData)
+      await saveRecipeData(data.recipeRawData)
+      
+      for (const config of data.configuredShuboData) {
+        await saveConfiguredShubo(config)
+      }
+      
+      await bulkUpdateDailyRecords(data.dailyRecordsData)
+      
+      await saveTankConfig(data.tankConfigData)
+    
+    await saveAnalysisSettings(data.analysisSettings)
+    
+    for (const history of data.csvUpdateHistory) {
+      await saveCSVUpdateHistory(history)
+    }
+    
+    for (const [dateKey, env] of Object.entries(data.dailyEnvironment)) {
+      await saveDailyEnvironment(dateKey, env.temperature, env.humidity)
+    }
+    
+    for (const [key, prep] of Object.entries(data.brewingPreparation)) {
+      const parts = key.split('-')
+      await saveBrewingPreparation(parseInt(parts[0]), parseInt(parts[1]), prep)
+    }
+    
+    for (const [key, discharge] of Object.entries(data.dischargeSchedule)) {
+      const parts = key.split('-')
+      await saveDischargeSchedule(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]), discharge)
+    }
+    
+    await loadAllData()
+  } catch (error) {
+    console.error('データインポートエラー:', error)
+    throw error
+  }
+}
+
 
   const availableFiscalYears = useMemo(() => {
     const years = new Set<number>()
@@ -511,6 +722,16 @@ async function saveDischargeSchedule(shuboNumber: number, fiscalYear: number, in
   removeConfiguredShubo, 
   updateDailyRecord, 
   getDailyRecords,
-  reloadData: loadAllData
+  reloadData: loadAllData,
+  analysisSettings,
+    saveAnalysisSettings,
+    csvUpdateHistory,
+    saveCSVUpdateHistory,
+    bulkUpdateDailyRecords,
+    deleteBrewingPreparationByShuboKeys,
+    deleteDischargeScheduleByShuboKeys,
+    importAllData
+  
 }
 }
+
