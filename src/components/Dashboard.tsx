@@ -43,7 +43,7 @@ export default function Dashboard({ dataContext }: DashboardProps) {
   const brewingInput = dataContext.brewingPreparation || {};
   const dischargeInput = dataContext.dischargeSchedule || {};
 
-  const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial<DailyRecordData>>>(new Map());
+const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial<DailyRecordData>>>(new Map());
   const [localBrewingUpdates] = useState<Map<string, any>>(new Map());
   const [localDischargeUpdates, setLocalDischargeUpdates] = useState<Map<string, any>>(new Map());
   const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
