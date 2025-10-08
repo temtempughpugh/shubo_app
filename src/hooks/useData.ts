@@ -427,24 +427,25 @@ async function loadDischargeSchedule() {
   setDischargeSchedule(converted)
 }
 async function loadAnalysisSettings() {
-    try {
-      const { data, error } = await supabase
-        .from('shubo_analysis_settings')
-        .select('*')
-        .single()
-      
-      if (error) {
-        console.log('分析設定が見つかりません。デフォルト値を使用します')
-        return
-      }
-      
-      if (data) {
-        setAnalysisSettings(data.settings)
-      }
-    } catch (error) {
-      console.error('分析設定読み込みエラー:', error)
+  try {
+    const { data, error } = await supabase
+      .from('shubo_analysis_settings')
+      .select('*')
+      .eq('is_active', true)
+      .limit(1)
+    
+    if (error) {
+      console.log('分析設定が見つかりません。デフォルト値を使用します')
+      return
     }
+    
+    if (data && data.length > 0) {
+      setAnalysisSettings(data[0].settings)
+    }
+  } catch (error) {
+    console.error('分析設定読み込みエラー:', error)
   }
+}
 
   async function loadCSVUpdateHistory() {
     try {
