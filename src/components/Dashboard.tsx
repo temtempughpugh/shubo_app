@@ -592,7 +592,7 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
       if (works.preparations.length > 0) {
         const sectionClass = singleWork ? 'work-section work-section-half-upper' : 'work-section';
         contentHTML += `<div class="${sectionClass}"><div class="section-title">仕込み準備（明日）</div>`;
-        contentHTML += '<table class="work-table-prep">';
+        contentHTML += '<table class="work-table">';
         
         works.preparations.forEach(shubo => {
           const waterAmount = shubo.recipeData.water;
@@ -610,14 +610,14 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
       if (works.brewingSchedules.length > 0) {
         const sectionClass = singleWork ? 'work-section work-section-half-upper' : 'work-section';
         contentHTML += `<div class="${sectionClass}"><div class="section-title">仕込み予定（本日）</div>`;
-        contentHTML += '<table class="work-table"><tr><th>項目</th><th>値</th><th>項目</th><th>値</th></tr>';
+        contentHTML += '<table class="work-table">';
         
         works.brewingSchedules.forEach(shubo => {
           const expectedMeasurement = shubo.recipeData.measurement;
-          contentHTML += `<tr><td class="item-label">酒母</td><td>${shubo.displayName}</td><td class="item-label">タンク</td><td>${shubo.selectedTankId}</td></tr>`;
-          contentHTML += `<tr><td class="item-label">水麹温度</td><td></td><td class="item-label">仕込温度</td><td></td></tr>`;
-          contentHTML += `<tr><td class="item-label">留測予定</td><td>${expectedMeasurement}L</td><td class="item-label">留測歩合</td><td></td></tr>`;
-          contentHTML += `<tr><td class="item-label">留測尺</td><td></td><td class="item-label">留測</td><td></td></tr>`;
+          contentHTML += `<tr><td class="item-label">酒母</td><td colspan="2">${shubo.displayName}</td><td class="item-label">タンク</td><td colspan="2">${shubo.selectedTankId}</td></tr>`;
+          contentHTML += `<tr><td class="item-label">水麹温度</td><td colspan="2"></td><td class="item-label">仕込温度</td><td colspan="2"></td></tr>`;
+          contentHTML += `<tr><td class="item-label">留測予定</td><td colspan="2">${expectedMeasurement}L</td><td class="item-label">留測歩合</td><td colspan="2"></td></tr>`;
+          contentHTML += `<tr><td class="item-label">留測尺</td><td colspan="2"></td><td class="item-label">留測</td><td colspan="2"></td></tr>`;
         });
         
         contentHTML += '</table></div>';
@@ -626,7 +626,7 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
       if (works.dischargeSchedules.length > 0) {
         const sectionClass = singleWork ? 'work-section work-section-half-lower' : 'work-section';
         contentHTML += `<div class="${sectionClass}"><div class="section-title">卸し予定</div>`;
-        contentHTML += '<table class="work-table"><tr><th>項目</th><th>値</th><th>項目</th><th>値</th></tr>';
+        contentHTML += '<table class="work-table">';
         
         works.dischargeSchedules.forEach(shubo => {
           const dischargeIndex = shubo.shuboEndDates.findIndex(endDate => {
@@ -654,10 +654,10 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
             soeWaterReference = recipe?.初添_汲み水 || null;
           }
           
-          contentHTML += `<tr><td class="item-label">酒母名</td><td>${shubo.displayName}</td><td class="item-label">タンク</td><td>${shubo.selectedTankId}</td></tr>`;
-          contentHTML += `<tr><td class="item-label">卸前尺</td><td></td><td class="item-label">卸前容量</td><td></td></tr>`;
-          contentHTML += `<tr><td class="item-label">卸後尺</td><td></td><td class="item-label">卸後容量</td><td></td></tr>`;
-          contentHTML += `<tr><td class="item-label">卸し量</td><td></td><td class="item-label">添汲み水</td><td>${soeWaterReference ? soeWaterReference + 'L' : ''}</td></tr>`;
+          contentHTML += `<tr><td class="item-label">酒母名</td><td colspan="2">${shubo.displayName}</td><td class="item-label">タンク</td><td colspan="2">${shubo.selectedTankId}</td></tr>`;
+          contentHTML += `<tr><td class="item-label">卸前尺</td><td colspan="2"></td><td class="item-label">卸前容量</td><td colspan="2"></td></tr>`;
+          contentHTML += `<tr><td class="item-label">卸後尺</td><td colspan="2"></td><td class="item-label">卸後容量</td><td colspan="2"></td></tr>`;
+          contentHTML += `<tr><td class="item-label">卸し量</td><td colspan="2"></td><td class="item-label">添汲み水</td><td colspan="2">${soeWaterReference ? soeWaterReference + 'L' : ''}</td></tr>`;
         });
         
         contentHTML += '</table></div>';
@@ -703,12 +703,8 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
 .analysis-table td{border:0.2mm solid #cbd5e1;padding:0.5mm;text-align:center;font-size:7pt;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .analysis-table td:nth-child(3){max-width:0}
 .work-table{width:100%;border-collapse:collapse;font-size:7pt;flex:1}
-.work-table th{background:#777;color:white;padding:0.5mm;border:0.2mm solid #64748b;font-weight:bold;text-align:center;font-size:7pt}
-.work-table td{border:0.2mm solid #cbd5e1;padding:0.5mm;text-align:center;font-size:7pt}
+.work-table td{border:0.2mm solid #cbd5e1;padding:0.5mm;text-align:center;font-size:7pt;width:16.66%}
 .work-table td.item-label{font-weight:bold;font-size:7pt}
-.work-table-prep{width:100%;border-collapse:collapse;font-size:7pt;flex:1}
-.work-table-prep td{border:0.2mm solid #cbd5e1;padding:0.5mm;text-align:center;font-size:7pt;width:16.66%}
-.work-table-prep td.item-label{font-weight:bold;font-size:7pt}
 @media print{body{margin:0;padding:0}.page{margin:0;padding:5mm}}
 </style>
 </head>
