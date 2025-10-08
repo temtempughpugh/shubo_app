@@ -550,9 +550,7 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
 
       // 仕込み予定HTML
       let brewingHTML = '';
-      if (works.brewingSchedules.length === 0) {
-        brewingHTML = '<div class="no-data">予定なし</div>';
-      } else {
+      if (works.brewingSchedules.length > 0) {
         brewingHTML = `<table>
           <tr>
             <th>酒母</th>
@@ -655,9 +653,7 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
 
       // 卸し予定HTML
       let dischargeHTML = '';
-      if (works.dischargeSchedules.length === 0) {
-        dischargeHTML = '<div class="no-data">予定なし</div>';
-      } else {
+      if (works.dischargeSchedules.length > 0) {
         dischargeHTML = `<table>
           <tr>
             <th>酒母名</th>
@@ -685,10 +681,11 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
       return `
         <div class="day-section">
           <div class="day-header">
-            <h2>📅 ${formatDateHeader(day)}</h2>
-            ${env.temperature || env.humidity ? `<div class="env-info">気温: ${env.temperature || '-'} / 湿度: ${env.humidity || '-'}</div>` : ''}
+            <div style="writing-mode: vertical-rl; float: left; margin-right: 3mm;">
+              <h2>📅${formatDateHeader(day)}</h2>
+            </div>
+            ${env.temperature && env.humidity ? `<div class="env-info">気温: ${env.temperature}℃ / 湿度: ${env.humidity}%</div>` : ''}
           </div>
-
           ${prepHTML ? `<div class="work-block">
             <div class="work-block-title prep">🧪 仕込み準備（明日）</div>
             ${prepHTML}
