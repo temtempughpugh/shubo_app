@@ -47,6 +47,7 @@ const [scheduleEndDate, setScheduleEndDate] = useState<string>('');
 const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial<DailyRecordData>>>(new Map());
   const [localBrewingUpdates, setLocalBrewingUpdates] = useState<Map<string, any>>(new Map());
   const [localDischargeUpdates, setLocalDischargeUpdates] = useState<Map<string, any>>(new Map());
+  const [localEnvironmentUpdates, setLocalEnvironmentUpdates] = useState<Map<string, { temperature: string; humidity: string }>>(new Map());
   const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   const getDateKey = (date: Date): string => {
@@ -55,6 +56,8 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
 
   const currentDateKey = getDateKey(currentDate);
   const currentEnv = dailyEnvironment[currentDateKey] || { temperature: '', humidity: '' };
+  const localEnv = localEnvironmentUpdates.get(currentDateKey);
+  const displayEnv = localEnv || currentEnv;
 
   const formatDate = (date: Date): string => {
     const days = ['日', '月', '火', '水', '木', '金', '土'];
@@ -206,6 +209,31 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
     }, 1500);
 
     debounceTimers.current.set(key, newTimer);
+  };
+
+  const updateEnvironment = (field: 'temperature' | 'humidity', value: string) => {
+    const key = currentDateKey;
+    
+    setLocalEnvironmentUpdates(prev => {
+      const newMap = new Map(prev);
+      const existing = prev.get(key) || currentEnv;
+      newMap.set(key, { ...existing, [field]: value });
+      return newMap;
+    });
+
+    const existingTimer = debounceTimers.current.get(`env-${key}`);
+    if (existingTimer) clearTimeout(existingTimer);
+
+    const newTimer = setTimeout(async () => {
+      const mergedUpdates = localEnvironmentUpdates.get(key) || currentEnv;
+      const finalTemperature = field === 'temperature' ? value : mergedUpdates.temperature;
+      const finalHumidity = field === 'humidity' ? value : mergedUpdates.humidity;
+      
+      await dataContext.saveDailyEnvironment(key, finalTemperature, finalHumidity);
+      debounceTimers.current.delete(`env-${key}`);
+    }, 1500);
+
+    debounceTimers.current.set(`env-${key}`, newTimer);
   };
 
   const getDisplayRecordValue = (shuboNumber: number, dayNumber: number, field: keyof DailyRecordData): string | number => {
@@ -703,14 +731,8 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
                   <label className="text-sm font-bold text-slate-600">気温</label>
                   <input
   type="number"
-  value={currentEnv.temperature}
-  onChange={(e) => {
-    dataContext.saveDailyEnvironment(
-      currentDateKey, 
-      e.target.value, 
-      currentEnv.humidity
-    );
-  }}
+  value={displayEnv.temperature}
+  onChange={(e) => updateEnvironment('temperature', e.target.value)}
   placeholder="25"
   className="w-16 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 />
@@ -720,14 +742,8 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
                   <label className="text-sm font-bold text-slate-600">湿度</label>
                   <input
   type="number"
-  value={currentEnv.humidity}
-  onChange={(e) => {
-    dataContext.saveDailyEnvironment(
-      currentDateKey, 
-      currentEnv.temperature, 
-      e.target.value
-    );
-  }}
+  value={displayEnv.humidity}
+  onChange={(e) => updateEnvironment('humidity', e.target.value)}
   placeholder="60"
   className="w-16 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
 />
