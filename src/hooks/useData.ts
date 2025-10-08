@@ -496,15 +496,18 @@ async function saveDischargeSchedule(shuboNumber: number, fiscalYear: number, in
 async function saveAnalysisSettings(settings: AnalysisSettings) {
   try {
     // まず既存データを取得
-    const { data: existing } = await supabase
+    const { data: existing, error: selectError } = await supabase
       .from('shubo_analysis_settings')
       .select('id')
       .eq('setting_type', 'main')
       .eq('is_active', true)
       .limit(1)
-      .single()
     
-    if (existing) {
+    if (selectError) {
+      console.error('設定取得エラー:', selectError)
+    }
+    
+    if (existing && existing.length > 0) {
       // 既存データがあれば更新
       const { error } = await supabase
         .from('shubo_analysis_settings')
@@ -512,7 +515,7 @@ async function saveAnalysisSettings(settings: AnalysisSettings) {
           settings,
           updated_at: new Date().toISOString()
         })
-        .eq('id', existing.id)
+        .eq('id', existing[0].id)
       
       if (error) throw error
     } else {
