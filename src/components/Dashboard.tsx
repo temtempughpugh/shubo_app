@@ -512,199 +512,195 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
   for (let i = 0; i < days.length; i += 4) {
     const pageDays = days.slice(i, i + 4);
     
-    let daysSectionsHTML = pageDays.map(day => {
+    const daysSectionsHTML = pageDays.map(day => {
       const dateKey = getDateKey(day);
       const env = dailyEnvironment[dateKey] || { temperature: '', humidity: '' };
       const works = getDayWorks(day);
 
-      // 仕込み準備HTML
-     let prepHTML = '';
+      let sectionsHTML = '';
+
+      // 仕込み準備
       if (works.preparations.length > 0) {
-        prepHTML = `<table>
-          <tr>
-            <th>酒母</th>
-            <th>タンク</th>
-            <th>酵母</th>
-            <th>汲み水</th>
-            <th>氷量</th>
-            <th>準備水</th>
-            <th>尺</th>
-            <th>乳酸</th>
-          </tr>
-          ${works.preparations.map(shubo => {
-            const waterAmount = shubo.recipeData.water;
-            const lacticAcidAmount = shubo.recipeData.lacticAcid;
-            return `<tr>
-              <td>${shubo.displayName}</td>
-              <td>${shubo.selectedTankId}</td>
-              <td>${shubo.originalData[0]?.yeast || '-'}</td>
-              <td>${waterAmount}L</td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td>${lacticAcidAmount}ml</td>
-            </tr>`;
-          }).join('')}
-        </table>`;
+        sectionsHTML += `
+          <div class="work-block">
+            <div class="work-block-title prep">仕込み準備（明日）</div>
+            <table>
+              <tr>
+                <th>酒母</th>
+                <th>タンク</th>
+                <th>酵母</th>
+                <th>汲み水</th>
+                <th>氷量</th>
+                <th>準備水</th>
+                <th>尺</th>
+                <th>乳酸</th>
+              </tr>
+              ${works.preparations.map(shubo => {
+                const waterAmount = shubo.recipeData.water;
+                const lacticAcidAmount = shubo.recipeData.lacticAcid;
+                return `<tr>
+                  <td>${shubo.displayName}</td>
+                  <td>${shubo.selectedTankId}</td>
+                  <td>${shubo.originalData[0]?.yeast || '-'}</td>
+                  <td>${waterAmount}L</td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td>${lacticAcidAmount}ml</td>
+                </tr>`;
+              }).join('')}
+            </table>
+          </div>`;
       }
 
-      // 仕込み予定HTML
-      let brewingHTML = '';
+      // 仕込み予定
       if (works.brewingSchedules.length > 0) {
-        brewingHTML = `<table>
-          <tr>
-            <th>酒母</th>
-            <th>タンク</th>
-            <th>水麹温度</th>
-            <th>仕込温度</th>
-            <th>留測予定</th>
-            <th>留測尺</th>
-            <th>留測</th>
-            <th>留測歩合</th>
-          </tr>
-          ${works.brewingSchedules.map(shubo => {
-            const expectedMeasurement = shubo.recipeData.measurement;
-            return `<tr>
-              <td>${shubo.displayName}</td>
-              <td>${shubo.selectedTankId}</td>
-              <td></td>
-              <td></td>
-              <td>${expectedMeasurement}L</td>
-              <td></td>
-              <td></td>
-              <td></td>
-            </tr>`;
-          }).join('')}
-        </table>`;
+        sectionsHTML += `
+          <div class="work-block">
+            <div class="work-block-title brewing">仕込み予定（本日）</div>
+            <table>
+              <tr>
+                <th>酒母</th>
+                <th>タンク</th>
+                <th>水麹温度</th>
+                <th>仕込温度</th>
+                <th>留測予定</th>
+                <th>留測尺</th>
+                <th>留測</th>
+                <th>留測歩合</th>
+              </tr>
+              ${works.brewingSchedules.map(shubo => {
+                const expectedMeasurement = shubo.recipeData.measurement;
+                return `<tr>
+                  <td>${shubo.displayName}</td>
+                  <td>${shubo.selectedTankId}</td>
+                  <td></td>
+                  <td></td>
+                  <td>${expectedMeasurement}L</td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                </tr>`;
+              }).join('')}
+            </table>
+          </div>`;
       }
 
-      // 分析予定HTML
-      let analysisHTML = '';
+      // 分析予定（2列）
       if (works.analysisSchedules.length > 0) {
         const halfLength = Math.ceil(works.analysisSchedules.length / 2);
         const leftColumn = works.analysisSchedules.slice(0, halfLength);
         const rightColumn = works.analysisSchedules.slice(halfLength);
         
-        analysisHTML = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2mm;">
-          <table>
-          <tr>
-            <th style="width: 8%;">採取</th>
-            <th style="width: 20%;">酒母名</th>
-            <th style="width: 15%;">日数</th>
-            <th style="width: 15%;">ラベル</th>
-            <th>品温</th>
-            <th>ボーメ</th>
-            <th>酸度</th>
-          </tr>
-          ${leftColumn.map(shubo => {
-            const dayNum = calculateDayNumber(shubo.shuboStartDate, day);
-            const isSaishushu = dayNum === 2 || dayNum === shubo.maxShuboDays;
-            const saishu = isSaishushu ? '○' : '';
-            
-            let label = '';
-            if (dayNum === 1) label = '仕込み';
-            else if (dayNum === 2) label = '打瀬';
-            else if (dayNum === shubo.maxShuboDays) label = '卸し';
-            
-            return `<tr>
-              <td style="text-align: center;">${saishu}</td>
-              <td>${shubo.displayName}</td>
-              <td>${dayNum}日目</td>
-              <td>${label}</td>
-              <td></td>
-              <td></td>
-              <td></td>
-            </tr>`;
-          }).join('')}
-        </table>
-        ${rightColumn.length > 0 ? `<table>
-          <tr>
-            <th style="width: 8%;">採取</th>
-            <th style="width: 20%;">酒母名</th>
-            <th style="width: 15%;">日数</th>
-            <th style="width: 15%;">ラベル</th>
-            <th>品温</th>
-            <th>ボーメ</th>
-            <th>酸度</th>
-          </tr>
-          ${rightColumn.map(shubo => {
-            const dayNum = calculateDayNumber(shubo.shuboStartDate, day);
-            const isSaishushu = dayNum === 2 || dayNum === shubo.maxShuboDays;
-            const saishu = isSaishushu ? '○' : '';
-            
-            let label = '';
-            if (dayNum === 1) label = '仕込み';
-            else if (dayNum === 2) label = '打瀬';
-            else if (dayNum === shubo.maxShuboDays) label = '卸し';
-            
-            return `<tr>
-              <td style="text-align: center;">${saishu}</td>
-              <td>${shubo.displayName}</td>
-              <td>${dayNum}日目</td>
-              <td>${label}</td>
-              <td></td>
-              <td></td>
-              <td></td>
-            </tr>`;
-          }).join('')}
-        </table>` : ''}
-        </div>`;
+        sectionsHTML += `
+          <div class="work-block">
+            <div class="work-block-title analysis">分析予定</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1mm;">
+              <table>
+                <tr>
+                  <th style="width: 10%;">採取</th>
+                  <th style="width: 25%;">酒母名</th>
+                  <th style="width: 15%;">日数</th>
+                  <th style="width: 15%;">ラベル</th>
+                  <th>品温</th>
+                  <th>ボーメ</th>
+                  <th>酸度</th>
+                </tr>
+                ${leftColumn.map(shubo => {
+                  const dayNum = calculateDayNumber(shubo.shuboStartDate, day);
+                  const isSaishushu = dayNum === 2 || dayNum === shubo.maxShuboDays;
+                  const saishu = isSaishushu ? '○' : '';
+                  
+                  let label = '';
+                  if (dayNum === 1) label = '仕込み';
+                  else if (dayNum === 2) label = '打瀬';
+                  else if (dayNum === shubo.maxShuboDays) label = '卸し';
+                  
+                  return `<tr>
+                    <td style="text-align: center;">${saishu}</td>
+                    <td>${shubo.displayName}</td>
+                    <td>${dayNum}日目</td>
+                    <td>${label}</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                  </tr>`;
+                }).join('')}
+              </table>
+              ${rightColumn.length > 0 ? `
+              <table>
+                <tr>
+                  <th style="width: 10%;">採取</th>
+                  <th style="width: 25%;">酒母名</th>
+                  <th style="width: 15%;">日数</th>
+                  <th style="width: 15%;">ラベル</th>
+                  <th>品温</th>
+                  <th>ボーメ</th>
+                  <th>酸度</th>
+                </tr>
+                ${rightColumn.map(shubo => {
+                  const dayNum = calculateDayNumber(shubo.shuboStartDate, day);
+                  const isSaishushu = dayNum === 2 || dayNum === shubo.maxShuboDays;
+                  const saishu = isSaishushu ? '○' : '';
+                  
+                  let label = '';
+                  if (dayNum === 1) label = '仕込み';
+                  else if (dayNum === 2) label = '打瀬';
+                  else if (dayNum === shubo.maxShuboDays) label = '卸し';
+                  
+                  return `<tr>
+                    <td style="text-align: center;">${saishu}</td>
+                    <td>${shubo.displayName}</td>
+                    <td>${dayNum}日目</td>
+                    <td>${label}</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                  </tr>`;
+                }).join('')}
+              </table>
+              ` : ''}
+            </div>
+          </div>`;
       }
 
-      // 卸し予定HTML
-      let dischargeHTML = '';
+      // 卸し予定
       if (works.dischargeSchedules.length > 0) {
-        dischargeHTML = `<table>
-          <tr>
-            <th>酒母名</th>
-            <th>タンク</th>
-            <th>卸前尺</th>
-            <th>卸前容量</th>
-            <th>卸後容量</th>
-            <th>卸し量</th>
-            <th>添汲み水</th>
-          </tr>
-          ${works.dischargeSchedules.map(shubo => {
-            return `<tr>
-              <td>${shubo.displayName}</td>
-              <td>${shubo.selectedTankId}</td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td></td>
-            </tr>`;
-          }).join('')}
-        </table>`;
+        sectionsHTML += `
+          <div class="work-block">
+            <div class="work-block-title discharge">卸し予定</div>
+            <table>
+              <tr>
+                <th>酒母名</th>
+                <th>タンク</th>
+                <th>卸前尺</th>
+                <th>卸前容量</th>
+                <th>卸後容量</th>
+                <th>卸し量</th>
+                <th>添汲み水</th>
+              </tr>
+              ${works.dischargeSchedules.map(shubo => {
+                return `<tr>
+                  <td>${shubo.displayName}</td>
+                  <td>${shubo.selectedTankId}</td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                </tr>`;
+              }).join('')}
+            </table>
+          </div>`;
       }
 
       return `
         <div class="day-section">
           <div class="day-header">
-            <div style="writing-mode: vertical-rl; float: left; margin-right: 3mm;">
-              <h2>📅${formatDateHeader(day)}</h2>
-            </div>
+            <h2 style="writing-mode: vertical-rl; margin: 0; padding: 0; float: left; margin-right: 3mm; font-size: 8pt;">${formatDateHeader(day)}</h2>
             ${env.temperature && env.humidity ? `<div class="env-info">気温: ${env.temperature}℃ / 湿度: ${env.humidity}%</div>` : ''}
           </div>
-          ${prepHTML ? `<div class="work-block">
-            <div class="work-block-title prep">🧪 仕込み準備（明日）</div>
-            ${prepHTML}
-          </div>` : ''}
-
-          ${brewingHTML ? `<div class="work-block">
-            <div class="work-block-title brewing">🌾 仕込み予定（本日）</div>
-            ${brewingHTML}
-          </div>` : ''}
-
-          ${analysisHTML ? `<div class="work-block">
-            <div class="work-block-title analysis">🔬 分析予定</div>
-            ${analysisHTML}
-          </div>` : ''}
-
-          ${dischargeHTML ? `<div class="work-block">
-            <div class="work-block-title discharge">📤 卸し予定</div>
-            ${dischargeHTML}
-          </div>` : ''}
+          ${sectionsHTML}
         </div>
       `;
     }).join('');
@@ -730,8 +726,8 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
     }
     body {
       font-family: 'Yu Gothic', 'Meiryo', sans-serif;
-      font-size: 9pt;
-      line-height: 1.3;
+      font-size: 8pt;
+      line-height: 1.2;
     }
     .page {
       width: 210mm;
@@ -744,33 +740,33 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
       page-break-after: auto;
     }
     .day-section {
-      height: 68mm;
-      margin-bottom: 2mm;
+      height: 71.25mm;
       border: 1px solid #cbd5e1;
-      padding: 2mm;
+      padding: 1mm;
+      margin-bottom: 1mm;
+      overflow: hidden;
     }
     .day-header {
       background: linear-gradient(to right, #2563eb, #1d4ed8);
       color: white;
-      padding: 1mm 2mm;
-      margin-bottom: 1mm;
-      border-radius: 1mm;
-    }
-    .day-header h2 {
-      font-size: 8pt;
-      font-weight: bold;
+      padding: 1mm;
       margin-bottom: 0.5mm;
+      overflow: hidden;
+    }
+    .env-info {
+      font-size: 7pt;
+      margin-left: 15mm;
     }
     .work-block {
-      margin-bottom: 1mm;
+      margin-bottom: 0.5mm;
     }
     .work-block-title {
       background: #f1f5f9;
-      padding: 0.5mm 1.5mm;
+      padding: 0.3mm 1mm;
       font-weight: bold;
       font-size: 6pt;
       border-left: 2px solid #2563eb;
-      margin-bottom: 0.5mm;
+      margin-bottom: 0.3mm;
     }
     .work-block-title.prep {
       border-left-color: #9333ea;
@@ -787,11 +783,11 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 9pt;
+      font-size: 6pt;
     }
     th, td {
       border: 0.3mm solid #cbd5e1;
-      padding: 0.5mm 1mm;
+      padding: 0.3mm 0.5mm;
       text-align: left;
     }
     th {
