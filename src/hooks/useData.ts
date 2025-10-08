@@ -494,48 +494,7 @@ async function saveDischargeSchedule(shuboNumber: number, fiscalYear: number, in
 }
 
 async function saveAnalysisSettings(settings: AnalysisSettings) {
-  try {
-    // まず既存データを取得
-    const { data: existing, error: selectError } = await supabase
-      .from('shubo_analysis_settings')
-      .select('id')
-      .eq('setting_type', 'main')
-      .eq('is_active', true)
-      .limit(1)
-    
-    if (selectError) {
-      console.error('設定取得エラー:', selectError)
-    }
-    
-    if (existing && existing.length > 0) {
-      // 既存データがあれば更新
-      const { error } = await supabase
-        .from('shubo_analysis_settings')
-        .update({
-          settings,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existing[0].id)
-      
-      if (error) throw error
-    } else {
-      // なければ新規作成
-      const { error } = await supabase
-        .from('shubo_analysis_settings')
-        .insert({
-          setting_type: 'main',
-          settings,
-          is_active: true
-        })
-      
-      if (error) throw error
-    }
-    
-    setAnalysisSettings(settings)
-  } catch (error) {
-    console.error('分析設定保存エラー:', error)
-    throw error
-  }
+  setAnalysisSettings(settings)
 }
 
   async function saveCSVUpdateHistory(history: CSVUpdateHistory) {
