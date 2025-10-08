@@ -592,15 +592,19 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
       if (works.preparations.length > 0) {
         const sectionClass = singleWork ? 'work-section work-section-half-upper' : 'work-section';
         contentHTML += `<div class="${sectionClass}"><div class="section-title">仕込み準備（明日）</div>`;
-        contentHTML += '<table class="work-table"><tr><th>項目</th><th>値</th><th>項目</th><th>値</th></tr>';
+        contentHTML += '<table class="work-table-prep"><tr><th colspan="4">項目 / 値</th></tr>';
         
         works.preparations.forEach(shubo => {
           const waterAmount = shubo.recipeData.water;
           const lacticAcidAmount = shubo.recipeData.lacticAcid;
-          contentHTML += `<tr><td class="item-label">酒母</td><td>${shubo.displayName}</td><td class="item-label">タンク</td><td>${shubo.selectedTankId}</td></tr>`;
-          contentHTML += `<tr><td class="item-label">酵母</td><td>${shubo.originalData[0]?.yeast || '-'}</td><td class="item-label">乳酸</td><td>${lacticAcidAmount}ml</td></tr>`;
-          contentHTML += `<tr><td class="item-label">汲み水</td><td>${waterAmount}L</td><td class="item-label">氷量</td><td></td></tr>`;
-          contentHTML += `<tr><td class="item-label">準備水</td><td></td><td class="item-label">尺</td><td></td></tr>`;
+          const kojiStorage = shubo.originalData[0]?.shuboStorage || '';
+          contentHTML += `<tr><td class="item-label">酒母</td><td colspan="3">${shubo.displayName}</td></tr>`;
+          contentHTML += `<tr><td class="item-label">タンク</td><td colspan="3">${shubo.selectedTankId}</td></tr>`;
+          contentHTML += `<tr><td class="item-label">酵母</td><td>${shubo.originalData[0]?.yeast || '-'}</td><td class="item-label">麹</td><td>${kojiStorage}</td><td class="item-label">乳酸</td><td>${lacticAcidAmount}ml</td></tr>`;
+          contentHTML += `<tr><td class="item-label">汲み水</td><td colspan="3">${waterAmount}L</td></tr>`;
+          contentHTML += `<tr><td class="item-label">氷量</td><td colspan="3"></td></tr>`;
+          contentHTML += `<tr><td class="item-label">準備水</td><td colspan="3"></td></tr>`;
+          contentHTML += `<tr><td class="item-label">尺</td><td colspan="3"></td></tr>`;
         });
         
         contentHTML += '</table></div>';
@@ -682,19 +686,19 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
 .page{width:210mm;height:297mm;padding:5mm;background:white;page-break-after:always}
 .page:last-child{page-break-after:auto}
 .day-box{height:71.25mm;border:1px solid #cbd5e1;margin-bottom:1mm;display:flex;overflow:hidden}
-.date-column{writing-mode:vertical-rl;background:#2563eb;color:white;padding:2mm 1mm;font-weight:bold;font-size:8pt;width:12mm;flex-shrink:0;display:flex;align-items:center;justify-content:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.date-column{writing-mode:vertical-rl;background:#666;color:white;padding:2mm 1mm;font-weight:bold;font-size:8pt;width:12mm;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .content-column{flex:1;overflow:hidden;display:flex;flex-direction:column}
-.env-bar{font-size:6pt;padding:0.5mm 1mm;background:#f8fafc;margin-bottom:0.5mm;border-left:2px solid #60a5fa;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.env-bar{font-size:6pt;padding:0.5mm 1mm;background:#f0f0f0;margin-bottom:0.5mm;border-left:2px solid #999;flex-shrink:0}
 .main-grid{display:flex;flex:1;overflow:hidden}
 .left-half{flex:1;border-right:2px solid #cbd5e1;padding:1mm;overflow:hidden;display:flex;flex-direction:column}
 .right-half{width:80mm;display:flex;flex-direction:column;padding:1mm}
-.section-title{background:#4b5563;color:white;padding:0.5mm 1mm;font-weight:bold;font-size:6pt;margin-bottom:0.5mm;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.section-title{background:#888;color:white;padding:0.5mm 1mm;font-weight:bold;font-size:6pt;margin-bottom:0.5mm;flex-shrink:0}
 .work-section{flex:1;border-bottom:1px solid #666;margin-bottom:1mm;padding-bottom:1mm;display:flex;flex-direction:column;overflow:hidden}
 .work-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
 .work-section-half-upper{flex:0 0 50%;margin-bottom:0;padding-bottom:1mm;border-bottom:1px solid #666}
 .work-section-half-lower{flex:0 0 50%;margin-top:auto;margin-bottom:0;padding-bottom:0;border-bottom:none}
 .analysis-table{width:100%;border-collapse:collapse;font-size:7pt;flex:1;table-layout:fixed}
-.analysis-table th{background:#1e293b;color:white;padding:0.5mm;border:0.2mm solid #334155;font-weight:bold;text-align:center;font-size:7pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.analysis-table th{background:#555;color:white;padding:0.5mm;border:0.2mm solid #334155;font-weight:bold;text-align:center;font-size:7pt}
 .analysis-table th:nth-child(1){width:6%}
 .analysis-table th:nth-child(2){width:12%}
 .analysis-table th:nth-child(3){width:10%}
@@ -702,9 +706,14 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
 .analysis-table td{border:0.2mm solid #cbd5e1;padding:0.5mm;text-align:center;font-size:7pt;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .analysis-table td:nth-child(3){max-width:0}
 .work-table{width:100%;border-collapse:collapse;font-size:7pt;flex:1}
-.work-table th{background:#475569;color:white;padding:0.5mm;border:0.2mm solid #64748b;font-weight:bold;text-align:center;font-size:7pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.work-table th{background:#777;color:white;padding:0.5mm;border:0.2mm solid #64748b;font-weight:bold;text-align:center;font-size:7pt}
 .work-table td{border:0.2mm solid #cbd5e1;padding:0.5mm;text-align:center;font-size:7pt}
 .work-table td.item-label{font-weight:bold;font-size:7pt}
+.work-table-prep{width:100%;border-collapse:collapse;font-size:7pt;flex:1;table-layout:fixed}
+.work-table-prep th{background:#777;color:white;padding:0.5mm;border:0.2mm solid #64748b;font-weight:bold;text-align:center;font-size:7pt}
+.work-table-prep td{border:0.2mm solid #cbd5e1;padding:0.5mm;text-align:center;font-size:7pt}
+.work-table-prep td.item-label{font-weight:bold;font-size:7pt;width:15%}
+.work-table-prep tr:nth-child(3) td:nth-child(2),.work-table-prep tr:nth-child(3) td:nth-child(4),.work-table-prep tr:nth-child(3) td:nth-child(6){width:14.1%}
 @media print{body{margin:0;padding:0}.page{margin:0;padding:5mm}}
 </style>
 </head>
