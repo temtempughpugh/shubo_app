@@ -1109,6 +1109,7 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
                       <tr className="bg-slate-100 border-b">
                         <th className="px-2 py-2 text-left text-xs font-bold">酒母</th>
                         <th className="px-2 py-2 text-left text-xs font-bold">タンク</th>
+                        <th className="px-2 py-2 text-left text-xs font-bold">麹</th>
                         <th className="px-2 py-2 text-left text-xs font-bold">汲み水</th>
                         <th className="px-2 py-2 text-left text-xs font-bold">氷量</th>
                         <th className="px-2 py-2 text-left text-xs font-bold">準備水</th>
@@ -1118,38 +1119,41 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
                     </thead>
                     <tbody>
                       {todayWorks.preparations.map(shubo => {
-                        const isDual = shubo.primaryNumber !== shubo.secondaryNumber;
-                        const waterAmount = shubo.recipeData.water;
-                        const lacticAcidAmount = shubo.recipeData.lacticAcid;
-                        
-                        let waterDisplay = `${waterAmount}L`;
-                        let lacticDisplay = `${lacticAcidAmount}ml`;
-                        
-                        if (isDual && dataContext.configuredShuboData && dataContext.configuredShuboData.length > 0) {
-                          const primary = dataContext.configuredShuboData.find(s => s.shuboNumber === shubo.primaryNumber);
-                          const secondary = dataContext.configuredShuboData.find(s => s.shuboNumber === shubo.secondaryNumber);
-                          
-                          if (primary && secondary) {
-                            const primaryWater = primary.recipeData.water;
-                            const secondaryWater = secondary.recipeData.water;
-                            const primaryLactic = primary.recipeData.lacticAcid;
-                            const secondaryLactic = secondary.recipeData.lacticAcid;
-                            
-                            waterDisplay = `${waterAmount}L (${primaryWater}+${secondaryWater})`;
-                            lacticDisplay = `${lacticAcidAmount}ml (${primaryLactic}+${secondaryLactic})`;
-                          }
-                        }
-                        
-                        const iceAmount = getDisplayBrewingValue(shubo.primaryNumber, shubo.fiscalYear, 'iceAmount');
-                        const preparationWater = iceAmount ? waterAmount - Number(iceAmount) : waterAmount;
-                        const kensyaku = getKensyakuFromCapacity(shubo.selectedTankId, preparationWater);
+  const isDual = shubo.primaryNumber !== shubo.secondaryNumber;
+  const waterAmount = shubo.recipeData.water;
+  const lacticAcidAmount = shubo.recipeData.lacticAcid;
+  const kojiStorage = shubo.originalData[0]?.shuboStorage || '';
+  const kojiStorageColor = kojiStorage === '冷凍' ? 'text-blue-600' : kojiStorage === '冷蔵' ? 'text-cyan-500' : '';
+  
+  let waterDisplay = `${waterAmount}L`;
+  let lacticDisplay = `${lacticAcidAmount}ml`;
+  
+  if (isDual && dataContext.configuredShuboData && dataContext.configuredShuboData.length > 0) {
+    const primary = dataContext.configuredShuboData.find(s => s.shuboNumber === shubo.primaryNumber);
+    const secondary = dataContext.configuredShuboData.find(s => s.shuboNumber === shubo.secondaryNumber);
+    
+    if (primary && secondary) {
+      const primaryWater = primary.recipeData.water;
+      const secondaryWater = secondary.recipeData.water;
+      const primaryLactic = primary.recipeData.lacticAcid;
+      const secondaryLactic = secondary.recipeData.lacticAcid;
+      
+      waterDisplay = `${waterAmount}L (${primaryWater}+${secondaryWater})`;
+      lacticDisplay = `${lacticAcidAmount}ml (${primaryLactic}+${secondaryLactic})`;
+    }
+  }
+  
+  const iceAmount = getDisplayBrewingValue(shubo.primaryNumber, shubo.fiscalYear, 'iceAmount');
+  const preparationWater = iceAmount ? waterAmount - Number(iceAmount) : waterAmount;
+  const kensyaku = getKensyakuFromCapacity(shubo.selectedTankId, preparationWater);
 
-                        return (
-                          <tr key={`${shubo.primaryNumber}-${shubo.fiscalYear}`} className="border-b hover:bg-slate-50">
-                            <td className="px-2 py-2 font-bold text-blue-700 text-xs">{shubo.displayName}</td>
-                            <td className="px-2 py-2 text-xs">{shubo.selectedTankId}</td>
-                            <td className="px-2 py-2 text-xs">{waterDisplay}</td>
-                            <td className="px-2 py-2">
+  return (
+    <tr key={`${shubo.primaryNumber}-${shubo.fiscalYear}`} className="border-b hover:bg-slate-50">
+      <td className="px-2 py-2 font-bold text-blue-700 text-xs">{shubo.displayName}</td>
+      <td className="px-2 py-2 text-xs">{shubo.selectedTankId}</td>
+      <td className={`px-2 py-2 text-xs font-bold ${kojiStorageColor}`}>{kojiStorage}</td>
+      <td className="px-2 py-2 text-xs">{waterDisplay}</td>
+      <td className="px-2 py-2">
                             <input 
                               type="number" 
                               value={iceAmount} 

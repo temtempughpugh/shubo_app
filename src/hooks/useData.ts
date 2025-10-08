@@ -182,25 +182,36 @@ async function importFromSupabaseStorage() {
     const { data, error } = await supabase.from('shubo_raw_data').select('*').order('shubo_number')
     if (error) throw error
     setShuboRawDataState((data || []).map((r: any) => ({
-      shuboNumber: r.shubo_number, fiscalYear: r.fiscal_year, brewingScale: r.brewing_scale,
-      pourDate: r.pour_date || '', brewingCategory: r.brewing_category || '', tankNumber: r.tank_number || 0,
-      memo: r.memo || '', kojiRiceVariety: r.koji_rice_variety || '', kakeRiceVariety: r.kake_rice_variety || '',
-      shuboTotalRice: r.shubo_total_rice || 0, shuboStartDate: r.shubo_start_date || '', shuboEndDate: r.shubo_end_date || '',
-      shuboDays: r.shubo_days || 0, yeast: r.yeast || ''
-    })))
+  shuboNumber: r.shubo_number, fiscalYear: r.fiscal_year, brewingScale: r.brewing_scale,
+  pourDate: r.pour_date || '', brewingCategory: r.brewing_category || '', tankNumber: r.tank_number || 0,
+  memo: r.memo || '', kojiRiceVariety: r.koji_rice_variety || '', kakeRiceVariety: r.kake_rice_variety || '',
+  shuboTotalRice: r.shubo_total_rice || 0, shuboStartDate: r.shubo_start_date || '', shuboEndDate: r.shubo_end_date || '',
+  shuboDays: r.shubo_days || 0, yeast: r.yeast || '', shuboStorage: r.shubo_storage || ''
+})))
   }
 
   async function saveShuboRawData(data: ShuboRawData[]) {
-    const { error } = await supabase.from('shubo_raw_data').upsert(data.map(s => ({
-      shubo_number: s.shuboNumber, fiscal_year: s.fiscalYear, brewing_scale: s.brewingScale,
-      pour_date: s.pourDate, brewing_category: s.brewingCategory, tank_number: s.tankNumber,
-      memo: s.memo, koji_rice_variety: s.kojiRiceVariety, kake_rice_variety: s.kakeRiceVariety,
-      shubo_total_rice: s.shuboTotalRice, shubo_start_date: s.shuboStartDate, shubo_end_date: s.shuboEndDate,
-      shubo_days: s.shuboDays, yeast: s.yeast, updated_at: new Date().toISOString()
-    })), { onConflict: 'shubo_number,fiscal_year' })
-    if (error) throw error
-    setShuboRawDataState(data)
-  }
+  const { error } = await supabase.from('shubo_raw_data').upsert(data.map(s => ({
+    shubo_number: s.shuboNumber,
+    fiscal_year: s.fiscalYear,
+    brewing_scale: s.brewingScale,
+    pour_date: s.pourDate,
+    brewing_category: s.brewingCategory,
+    tank_number: s.tankNumber,
+    memo: s.memo,
+    koji_rice_variety: s.kojiRiceVariety,
+    kake_rice_variety: s.kakeRiceVariety,
+    shubo_total_rice: s.shuboTotalRice,
+    shubo_start_date: s.shuboStartDate,
+    shubo_end_date: s.shuboEndDate,
+    shubo_days: s.shuboDays,
+    yeast: s.yeast,
+    shubo_storage: s.shuboStorage,  // ← この行を追加
+    updated_at: new Date().toISOString()
+  })), { onConflict: 'shubo_number,fiscal_year' })
+  if (error) throw error
+  setShuboRawDataState(data)
+}
 
   async function loadConfiguredShuboData() {
     const parseLocalDate = (dateStr: string) => {

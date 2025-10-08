@@ -186,7 +186,8 @@ export function parseShuboCSV(csvData: string[][]): ShuboRawData[] {
       shuboEndDate: row[24] || '',
       shuboDays: parseInt(row[25]) || 0,
       yeast: row[26] || '',
-      fiscalYear: fiscalYear  // ← 追加
+      fiscalYear: fiscalYear,  // ← 追加
+      shuboStorage: row[21] || ''  // ← この行を追加
     };
     
     results.push(shuboData);

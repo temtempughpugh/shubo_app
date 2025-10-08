@@ -14,6 +14,7 @@ export interface ShuboRawData {
   shuboDays: number;
   yeast: string;
   fiscalYear: number;  // ← 追加
+  shuboStorage: string;  // ← 追加
 }
 
 export interface RecipeRawData {
