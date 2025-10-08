@@ -36,7 +36,8 @@ export default function Dashboard({ dataContext }: DashboardProps) {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [expandedShubo, setExpandedShubo] = useState<number | null>(null);
-  
+  const [scheduleStartDate, setScheduleStartDate] = useState<string>('');
+const [scheduleEndDate, setScheduleEndDate] = useState<string>('');
    const dailyEnvironment = dataContext.dailyEnvironment || {};
 
 
@@ -411,6 +412,398 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
       return statusOrder[a.status] - statusOrder[b.status];
     });
   }, [dataContext.mergedShuboData, currentDate]);
+
+  const handleScheduleExport = () => {
+  if (!scheduleStartDate || !scheduleEndDate) {
+    alert('開始日と終了日を選択してください');
+    return;
+  }
+
+  const start = new Date(scheduleStartDate);
+  const end = new Date(scheduleEndDate);
+  
+  if (start > end) {
+    alert('開始日は終了日より前の日付を選択してください');
+    return;
+  }
+
+  const html = generateScheduleHTML(start, end);
+  
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const dateStr = `${scheduleStartDate}_${scheduleEndDate}`.replace(/-/g, '');
+  a.href = url;
+  a.download = `酒母予定表_${dateStr}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  alert('予定表を出力しました');
+};
+
+const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
+  const days: Date[] = [];
+  const current = new Date(startDate);
+  
+  while (current <= endDate) {
+    days.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+
+  const formatDateHeader = (date: Date): string => {
+    const weekDays = ['日', '月', '火', '水', '木', '金', '土'];
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const weekDay = weekDays[date.getDay()];
+    return `${year}/${month}/${day}（${weekDay}）`;
+  };
+
+  const getDateKey = (date: Date): string => {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  };
+
+  const getDayWorks = (date: Date) => {
+    const tomorrow = new Date(date);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    const today = new Date(date);
+    today.setHours(0, 0, 0, 0);
+
+    const preparations = dataContext.mergedShuboData.filter(shubo => {
+      const startDate = shubo.shuboStartDate instanceof Date 
+        ? new Date(shubo.shuboStartDate) 
+        : new Date(shubo.shuboStartDate);
+      startDate.setHours(0, 0, 0, 0);
+      return startDate.getTime() === tomorrow.getTime();
+    });
+
+    const brewingSchedules = dataContext.mergedShuboData.filter(shubo => {
+      const startDate = shubo.shuboStartDate instanceof Date 
+        ? new Date(shubo.shuboStartDate) 
+        : new Date(shubo.shuboStartDate);
+      startDate.setHours(0, 0, 0, 0);
+      return startDate.getTime() === today.getTime();
+    });
+
+    const analysisSchedules = dataContext.mergedShuboData.filter(shubo => {
+      const status = getStatusForMerged(shubo);
+      if (status !== '管理中') return false;
+      
+      const dayNum = calculateDayNumber(shubo.shuboStartDate, date);
+      return dayNum > 1;
+    });
+
+    const dischargeSchedules = dataContext.mergedShuboData.filter(shubo => {
+      return shubo.shuboEndDates.some(endDate => {
+        const d = endDate instanceof Date ? new Date(endDate) : new Date(endDate);
+        d.setHours(0, 0, 0, 0);
+        return d.getTime() === today.getTime();
+      });
+    });
+
+    return { preparations, brewingSchedules, analysisSchedules, dischargeSchedules };
+  };
+
+  let pagesHTML = '';
+  
+  for (let i = 0; i < days.length; i += 4) {
+    const pageDays = days.slice(i, i + 4);
+    
+    let daysSectionsHTML = pageDays.map(day => {
+      const dateKey = getDateKey(day);
+      const env = dailyEnvironment[dateKey] || { temperature: '', humidity: '' };
+      const works = getDayWorks(day);
+
+      // 仕込み準備HTML
+      let prepHTML = '';
+      if (works.preparations.length === 0) {
+        prepHTML = '<div class="no-data">予定なし</div>';
+      } else {
+        prepHTML = `<table>
+          <tr>
+            <th>酒母</th>
+            <th>タンク</th>
+            <th>酵母</th>
+            <th>汲み水</th>
+            <th>氷量</th>
+            <th>準備水</th>
+            <th>尺</th>
+            <th>乳酸</th>
+          </tr>
+          ${works.preparations.map(shubo => {
+            const waterAmount = shubo.recipeData.water;
+            const lacticAcidAmount = shubo.recipeData.lacticAcid;
+            return `<tr>
+              <td>${shubo.displayName}</td>
+              <td>${shubo.selectedTankId}</td>
+              <td>${shubo.originalData[0]?.yeast || '-'}</td>
+              <td>${waterAmount}L</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td>${lacticAcidAmount}ml</td>
+            </tr>`;
+          }).join('')}
+        </table>`;
+      }
+
+      // 仕込み予定HTML
+      let brewingHTML = '';
+      if (works.brewingSchedules.length === 0) {
+        brewingHTML = '<div class="no-data">予定なし</div>';
+      } else {
+        brewingHTML = `<table>
+          <tr>
+            <th>酒母</th>
+            <th>タンク</th>
+            <th>水麹温度</th>
+            <th>仕込温度</th>
+            <th>留測予定</th>
+            <th>留測尺</th>
+            <th>留測</th>
+            <th>留測歩合</th>
+          </tr>
+          ${works.brewingSchedules.map(shubo => {
+            const expectedMeasurement = shubo.recipeData.measurement;
+            return `<tr>
+              <td>${shubo.displayName}</td>
+              <td>${shubo.selectedTankId}</td>
+              <td></td>
+              <td></td>
+              <td>${expectedMeasurement}L</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>`;
+          }).join('')}
+        </table>`;
+      }
+
+      // 分析予定HTML
+      let analysisHTML = '';
+      if (works.analysisSchedules.length === 0) {
+        analysisHTML = '<div class="no-data">予定なし</div>';
+      } else {
+        analysisHTML = `<table>
+          <tr>
+            <th style="width: 5%;">採取</th>
+            <th style="width: 10%;">酒母名</th>
+            <th style="width: 12%;">酵母</th>
+            <th style="width: 8%;">日数</th>
+            <th style="width: 8%;">ラベル</th>
+            <th style="width: 8%;">品温</th>
+            <th style="width: 8%;">ボーメ</th>
+            <th style="width: 8%;">酸度</th>
+            <th style="width: 10%;">加温後品温</th>
+            <th style="width: 10%;">午後品温</th>
+            <th style="width: 13%;">メモ</th>
+          </tr>
+          ${works.analysisSchedules.map(shubo => {
+            const dayNum = calculateDayNumber(shubo.shuboStartDate, day);
+            const isSaishushu = dayNum === 2 || dayNum === shubo.maxShuboDays;
+            const saishu = isSaishushu ? '○' : '';
+            
+            let label = '-';
+            if (dayNum === 1) label = '仕込み';
+            else if (dayNum === 2) label = '打瀬';
+            else if (dayNum === shubo.maxShuboDays) label = '卸し';
+            
+            return `<tr>
+              <td style="text-align: center;">${saishu}</td>
+              <td>${shubo.displayName}</td>
+              <td>${shubo.originalData[0]?.yeast || '-'}</td>
+              <td>${dayNum}日目</td>
+              <td>${label}</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>`;
+          }).join('')}
+        </table>`;
+      }
+
+      // 卸し予定HTML
+      let dischargeHTML = '';
+      if (works.dischargeSchedules.length === 0) {
+        dischargeHTML = '<div class="no-data">予定なし</div>';
+      } else {
+        dischargeHTML = `<table>
+          <tr>
+            <th>酒母名</th>
+            <th>タンク</th>
+            <th>卸前尺</th>
+            <th>卸前容量</th>
+            <th>卸後容量</th>
+            <th>卸し量</th>
+            <th>添汲み水</th>
+          </tr>
+          ${works.dischargeSchedules.map(shubo => {
+            return `<tr>
+              <td>${shubo.displayName}</td>
+              <td>${shubo.selectedTankId}</td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>`;
+          }).join('')}
+        </table>`;
+      }
+
+      return `
+        <div class="day-section">
+          <div class="day-header">
+            <h2>📅 ${formatDateHeader(day)}</h2>
+            <div class="env-info">気温: ${env.temperature || '-'} / 湿度: ${env.humidity || '-'}</div>
+          </div>
+
+          <div class="work-block">
+            <div class="work-block-title prep">🧪 仕込み準備（明日）</div>
+            ${prepHTML}
+          </div>
+
+          <div class="work-block">
+            <div class="work-block-title brewing">🌾 仕込み予定（本日）</div>
+            ${brewingHTML}
+          </div>
+
+          <div class="work-block">
+            <div class="work-block-title analysis">🔬 分析予定</div>
+            ${analysisHTML}
+          </div>
+
+          <div class="work-block">
+            <div class="work-block-title discharge">📤 卸し予定</div>
+            ${dischargeHTML}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    pagesHTML += `<div class="page">${daysSectionsHTML}</div>`;
+  }
+
+  return `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>酒母予定表</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Yu Gothic', 'Meiryo', sans-serif;
+      font-size: 7pt;
+      line-height: 1.2;
+    }
+    .page {
+      width: 210mm;
+      height: 297mm;
+      padding: 10mm;
+      background: white;
+      page-break-after: always;
+    }
+    .page:last-child {
+      page-break-after: auto;
+    }
+    .day-section {
+      height: 68mm;
+      margin-bottom: 2mm;
+      border: 1px solid #cbd5e1;
+      padding: 2mm;
+    }
+    .day-header {
+      background: linear-gradient(to right, #2563eb, #1d4ed8);
+      color: white;
+      padding: 1.5mm 2mm;
+      margin-bottom: 1.5mm;
+      border-radius: 1mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .day-header h2 {
+      font-size: 9pt;
+      font-weight: bold;
+    }
+    .day-header .env-info {
+      font-size: 6pt;
+    }
+    .work-block {
+      margin-bottom: 1mm;
+    }
+    .work-block-title {
+      background: #f1f5f9;
+      padding: 0.5mm 1.5mm;
+      font-weight: bold;
+      font-size: 6pt;
+      border-left: 2px solid #2563eb;
+      margin-bottom: 0.5mm;
+    }
+    .work-block-title.prep {
+      border-left-color: #9333ea;
+    }
+    .work-block-title.brewing {
+      border-left-color: #16a34a;
+    }
+    .work-block-title.analysis {
+      border-left-color: #f97316;
+    }
+    .work-block-title.discharge {
+      border-left-color: #dc2626;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 5.5pt;
+    }
+    th, td {
+      border: 0.3mm solid #cbd5e1;
+      padding: 0.5mm 1mm;
+      text-align: left;
+    }
+    th {
+      background: #f8fafc;
+      font-weight: bold;
+    }
+    .no-data {
+      color: #94a3b8;
+      font-size: 5.5pt;
+      padding: 1mm;
+      text-align: center;
+    }
+    @media print {
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .page {
+        margin: 0;
+        padding: 10mm;
+      }
+    }
+  </style>
+</head>
+<body>
+  ${pagesHTML}
+</body>
+</html>
+  `;
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
@@ -1473,6 +1866,44 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+
+<div className="bg-white rounded-xl shadow-lg border border-slate-200/50 overflow-hidden">
+          <div className="bg-indigo-600 px-4 py-2">
+            <h3 className="text-base font-bold text-white">📋 予定表出力</h3>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">開始日</label>
+                <input
+                  type="date"
+                  value={scheduleStartDate}
+                  onChange={(e) => setScheduleStartDate(e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">終了日</label>
+                <input
+                  type="date"
+                  value={scheduleEndDate}
+                  onChange={(e) => setScheduleEndDate(e.target.value)}
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+            <button
+              onClick={handleScheduleExport}
+              disabled={!scheduleStartDate || !scheduleEndDate}
+              className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-xl font-bold shadow-lg transition-all"
+            >
+              📥 予定表HTML出力
+            </button>
+            <p className="text-xs text-slate-500 mt-3">
+              ※ A4縦で4日分/ページとして出力されます
+            </p>
           </div>
         </div>
 
