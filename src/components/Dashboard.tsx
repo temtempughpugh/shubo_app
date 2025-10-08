@@ -519,6 +519,11 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
 
       let sectionsHTML = '';
 
+      // 気温・湿度
+      if (env.temperature && env.humidity) {
+        sectionsHTML += `<div class="env-info">気温: ${env.temperature}℃ / 湿度: ${env.humidity}%</div>`;
+      }
+
       // 仕込み準備
       if (works.preparations.length > 0) {
         sectionsHTML += `
@@ -696,11 +701,10 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
 
       return `
         <div class="day-section">
-          <div class="day-header">
-            <h2 style="writing-mode: vertical-rl; margin: 0; padding: 0; float: left; margin-right: 3mm; font-size: 8pt;">${formatDateHeader(day)}</h2>
-            ${env.temperature && env.humidity ? `<div class="env-info">気温: ${env.temperature}℃ / 湿度: ${env.humidity}%</div>` : ''}
+          <div class="date-vertical">${formatDateHeader(day)}</div>
+          <div class="content-area">
+            ${sectionsHTML}
           </div>
-          ${sectionsHTML}
         </div>
       `;
     }).join('');
@@ -742,20 +746,34 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
     .day-section {
       height: 71.25mm;
       border: 1px solid #cbd5e1;
-      padding: 1mm;
       margin-bottom: 1mm;
+      display: flex;
       overflow: hidden;
     }
-    .day-header {
-      background: linear-gradient(to right, #2563eb, #1d4ed8);
+    .date-vertical {
+      writing-mode: vertical-rl;
+      background: linear-gradient(to bottom, #2563eb, #1d4ed8);
       color: white;
+      padding: 2mm 1mm;
+      font-weight: bold;
+      font-size: 8pt;
+      width: 12mm;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .content-area {
+      flex: 1;
       padding: 1mm;
-      margin-bottom: 0.5mm;
       overflow: hidden;
     }
     .env-info {
       font-size: 7pt;
-      margin-left: 15mm;
+      padding: 0.5mm 1mm;
+      background: #f8fafc;
+      margin-bottom: 0.5mm;
+      border-left: 2px solid #60a5fa;
     }
     .work-block {
       margin-bottom: 0.5mm;
