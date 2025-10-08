@@ -517,11 +517,18 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
     });
 
     const analysisSchedules = dataContext.mergedShuboData.filter(shubo => {
-      const status = getStatusForMerged(shubo);
-      if (status !== '管理中') return false;
+      const startDate = shubo.shuboStartDate instanceof Date 
+        ? new Date(shubo.shuboStartDate) 
+        : new Date(shubo.shuboStartDate);
+      startDate.setHours(0, 0, 0, 0);
       
-      const dayNum = calculateDayNumber(shubo.shuboStartDate, date);
-      return dayNum > 1;
+      const lastEndDate = shubo.shuboEndDates[shubo.shuboEndDates.length - 1];
+      const endDate = lastEndDate instanceof Date 
+        ? new Date(lastEndDate) 
+        : new Date(lastEndDate);
+      endDate.setHours(0, 0, 0, 0);
+      
+      return date >= startDate && date <= endDate;
     });
 
     const dischargeSchedules = dataContext.mergedShuboData.filter(shubo => {
