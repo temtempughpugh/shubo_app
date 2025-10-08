@@ -566,7 +566,9 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
           if (dayNum === 1) label = '仕込み';
           else if (dayNum === 2) label = '打瀬';
           else if (dayNum === shubo.maxShuboDays) label = '卸し';
-          contentHTML += `<tr><td>${saishu}</td><td>${shubo.displayName}</td><td>${shubo.originalData[0]?.yeast || ''}</td><td>${label}</td><td>${dayNum}</td><td></td><td></td><td></td><td></td><td></td></tr>`;
+          const yeast = shubo.originalData[0]?.yeast || '';
+          const yeastDisplay = yeast.length > 7 ? yeast.substring(0, 7) : yeast;
+          contentHTML += `<tr><td>${saishu}</td><td>${shubo.displayName}</td><td>${yeastDisplay}</td><td>${label}</td><td>${dayNum}</td><td></td><td></td><td></td><td></td><td></td></tr>`;
         });
         
         contentHTML += '</table></div>';
@@ -684,9 +686,14 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
 .work-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
 .work-section-half-upper{flex:0 0 50%;margin-bottom:0;padding-bottom:1mm;border-bottom:1px solid #666}
 .work-section-half-lower{flex:0 0 50%;margin-top:auto;margin-bottom:0;padding-bottom:0;border-bottom:none}
-.analysis-table{width:100%;border-collapse:collapse;font-size:7pt;flex:1}
+.analysis-table{width:100%;border-collapse:collapse;font-size:7pt;flex:1;table-layout:fixed}
 .analysis-table th{background:#1e293b;color:white;padding:0.5mm;border:0.2mm solid #334155;font-weight:bold;text-align:center;font-size:7pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.analysis-table td{border:0.2mm solid #cbd5e1;padding:0.5mm;text-align:center;font-size:7pt}
+.analysis-table th:nth-child(1){width:6%}
+.analysis-table th:nth-child(2){width:12%}
+.analysis-table th:nth-child(3){width:10%}
+.analysis-table th:nth-child(4),.analysis-table th:nth-child(5),.analysis-table th:nth-child(6),.analysis-table th:nth-child(7),.analysis-table th:nth-child(8),.analysis-table th:nth-child(9),.analysis-table th:nth-child(10){width:10.2%}
+.analysis-table td{border:0.2mm solid #cbd5e1;padding:0.5mm;text-align:center;font-size:7pt;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.analysis-table td:nth-child(3){max-width:0}
 .work-table{width:100%;border-collapse:collapse;font-size:7pt;flex:1}
 .work-table th{background:#475569;color:white;padding:0.5mm;border:0.2mm solid #64748b;font-weight:bold;text-align:center;font-size:7pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .work-table td{border:0.2mm solid #cbd5e1;padding:0.5mm;text-align:center;font-size:7pt}
