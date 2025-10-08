@@ -678,7 +678,7 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
 <title>酒母予定表</title>
 <style>
 @page{size:A4 portrait;margin:10mm}
-*{margin:0;padding:0;box-sizing:border-box}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
 .page{width:210mm;height:297mm;padding:5mm;background:white;page-break-after:always}
 .page:last-child{page-break-after:auto}
