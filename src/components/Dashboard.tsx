@@ -518,10 +518,8 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
       const works = getDayWorks(day);
 
       // 仕込み準備HTML
-      let prepHTML = '';
-      if (works.preparations.length === 0) {
-        prepHTML = '<div class="no-data">予定なし</div>';
-      } else {
+     let prepHTML = '';
+      if (works.preparations.length > 0) {
         prepHTML = `<table>
           <tr>
             <th>酒母</th>
@@ -584,29 +582,28 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
 
       // 分析予定HTML
       let analysisHTML = '';
-      if (works.analysisSchedules.length === 0) {
-        analysisHTML = '<div class="no-data">予定なし</div>';
-      } else {
-        analysisHTML = `<table>
+      if (works.analysisSchedules.length > 0) {
+        const halfLength = Math.ceil(works.analysisSchedules.length / 2);
+        const leftColumn = works.analysisSchedules.slice(0, halfLength);
+        const rightColumn = works.analysisSchedules.slice(halfLength);
+        
+        analysisHTML = `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2mm;">
+          <table>
           <tr>
-            <th style="width: 5%;">採取</th>
-            <th style="width: 10%;">酒母名</th>
-            <th style="width: 12%;">酵母</th>
-            <th style="width: 8%;">日数</th>
-            <th style="width: 8%;">ラベル</th>
-            <th style="width: 8%;">品温</th>
-            <th style="width: 8%;">ボーメ</th>
-            <th style="width: 8%;">酸度</th>
-            <th style="width: 10%;">加温後品温</th>
-            <th style="width: 10%;">午後品温</th>
-            <th style="width: 13%;">メモ</th>
+            <th style="width: 8%;">採取</th>
+            <th style="width: 20%;">酒母名</th>
+            <th style="width: 15%;">日数</th>
+            <th style="width: 15%;">ラベル</th>
+            <th>品温</th>
+            <th>ボーメ</th>
+            <th>酸度</th>
           </tr>
-          ${works.analysisSchedules.map(shubo => {
+          ${leftColumn.map(shubo => {
             const dayNum = calculateDayNumber(shubo.shuboStartDate, day);
             const isSaishushu = dayNum === 2 || dayNum === shubo.maxShuboDays;
             const saishu = isSaishushu ? '○' : '';
             
-            let label = '-';
+            let label = '';
             if (dayNum === 1) label = '仕込み';
             else if (dayNum === 2) label = '打瀬';
             else if (dayNum === shubo.maxShuboDays) label = '卸し';
@@ -614,18 +611,46 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
             return `<tr>
               <td style="text-align: center;">${saishu}</td>
               <td>${shubo.displayName}</td>
-              <td>${shubo.originalData[0]?.yeast || '-'}</td>
               <td>${dayNum}日目</td>
               <td>${label}</td>
               <td></td>
               <td></td>
               <td></td>
+            </tr>`;
+          }).join('')}
+        </table>
+        ${rightColumn.length > 0 ? `<table>
+          <tr>
+            <th style="width: 8%;">採取</th>
+            <th style="width: 20%;">酒母名</th>
+            <th style="width: 15%;">日数</th>
+            <th style="width: 15%;">ラベル</th>
+            <th>品温</th>
+            <th>ボーメ</th>
+            <th>酸度</th>
+          </tr>
+          ${rightColumn.map(shubo => {
+            const dayNum = calculateDayNumber(shubo.shuboStartDate, day);
+            const isSaishushu = dayNum === 2 || dayNum === shubo.maxShuboDays;
+            const saishu = isSaishushu ? '○' : '';
+            
+            let label = '';
+            if (dayNum === 1) label = '仕込み';
+            else if (dayNum === 2) label = '打瀬';
+            else if (dayNum === shubo.maxShuboDays) label = '卸し';
+            
+            return `<tr>
+              <td style="text-align: center;">${saishu}</td>
+              <td>${shubo.displayName}</td>
+              <td>${dayNum}日目</td>
+              <td>${label}</td>
               <td></td>
               <td></td>
               <td></td>
             </tr>`;
           }).join('')}
-        </table>`;
+        </table>` : ''}
+        </div>`;
       }
 
       // 卸し予定HTML
@@ -661,28 +686,28 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
         <div class="day-section">
           <div class="day-header">
             <h2>📅 ${formatDateHeader(day)}</h2>
-            <div class="env-info">気温: ${env.temperature || '-'} / 湿度: ${env.humidity || '-'}</div>
+            ${env.temperature || env.humidity ? `<div class="env-info">気温: ${env.temperature || '-'} / 湿度: ${env.humidity || '-'}</div>` : ''}
           </div>
 
-          <div class="work-block">
+          ${prepHTML ? `<div class="work-block">
             <div class="work-block-title prep">🧪 仕込み準備（明日）</div>
             ${prepHTML}
-          </div>
+          </div>` : ''}
 
-          <div class="work-block">
+          ${brewingHTML ? `<div class="work-block">
             <div class="work-block-title brewing">🌾 仕込み予定（本日）</div>
             ${brewingHTML}
-          </div>
+          </div>` : ''}
 
-          <div class="work-block">
+          ${analysisHTML ? `<div class="work-block">
             <div class="work-block-title analysis">🔬 分析予定</div>
             ${analysisHTML}
-          </div>
+          </div>` : ''}
 
-          <div class="work-block">
+          ${dischargeHTML ? `<div class="work-block">
             <div class="work-block-title discharge">📤 卸し予定</div>
             ${dischargeHTML}
-          </div>
+          </div>` : ''}
         </div>
       `;
     }).join('');
@@ -730,16 +755,14 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
     .day-header {
       background: linear-gradient(to right, #2563eb, #1d4ed8);
       color: white;
-      padding: 1.5mm 2mm;
-      margin-bottom: 1.5mm;
+      padding: 1mm 2mm;
+      margin-bottom: 1mm;
       border-radius: 1mm;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
     }
     .day-header h2 {
-      font-size: 10pt;
+      font-size: 8pt;
       font-weight: bold;
+      margin-bottom: 0.5mm;
     }
     .work-block {
       margin-bottom: 1mm;
