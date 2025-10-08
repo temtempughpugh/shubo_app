@@ -646,7 +646,7 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
 .analysis-table{width:100%;border-collapse:collapse;font-size:5pt;flex:1}
 .analysis-table th{background:#1e293b;color:white;padding:0.5mm;border:0.2mm solid #334155;font-weight:bold;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .analysis-table td{border:0.2mm solid #cbd5e1;padding:0.5mm;text-align:center}
-.work-table{width:100%;border-collapse:collapse;font-size:5pt;flex:1}
+.work-table{width:100%;border-collapse:collapse;font-size:7pt;flex:1}
 .work-table th{background:#475569;color:white;padding:0.5mm;border:0.2mm solid #64748b;font-weight:bold;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .work-table td{border:0.2mm solid #cbd5e1;padding:0.5mm;text-align:center}
 .work-table td.item-label{font-weight:bold}
