@@ -603,13 +603,17 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1mm;">
               <table>
                 <tr>
-                  <th style="width: 10%;">採取</th>
-                  <th style="width: 25%;">酒母名</th>
-                  <th style="width: 15%;">日数</th>
-                  <th style="width: 15%;">ラベル</th>
+                  <th>採取</th>
+                  <th>酒母名</th>
+                  <th>酵母</th>
+                  <th>日数</th>
+                  <th>ラベル</th>
                   <th>品温</th>
                   <th>ボーメ</th>
                   <th>酸度</th>
+                  <th>品温2</th>
+                  <th>品温3</th>
+                  <th>メモ</th>
                 </tr>
                 ${leftColumn.map(shubo => {
                   const dayNum = calculateDayNumber(shubo.shuboStartDate, day);
@@ -622,10 +626,14 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
                   else if (dayNum === shubo.maxShuboDays) label = '卸し';
                   
                   return `<tr>
-                    <td style="text-align: center;">${saishu}</td>
+                    <td>${saishu}</td>
                     <td>${shubo.displayName}</td>
-                    <td>${dayNum}日目</td>
+                    <td>${shubo.originalData[0]?.yeast || '-'}</td>
+                    <td>${dayNum}</td>
                     <td>${label}</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
                     <td></td>
                     <td></td>
                     <td></td>
@@ -635,13 +643,17 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
               ${rightColumn.length > 0 ? `
               <table>
                 <tr>
-                  <th style="width: 10%;">採取</th>
-                  <th style="width: 25%;">酒母名</th>
-                  <th style="width: 15%;">日数</th>
-                  <th style="width: 15%;">ラベル</th>
+                  <th>採取</th>
+                  <th>酒母名</th>
+                  <th>酵母</th>
+                  <th>日数</th>
+                  <th>ラベル</th>
                   <th>品温</th>
                   <th>ボーメ</th>
                   <th>酸度</th>
+                  <th>品温2</th>
+                  <th>品温3</th>
+                  <th>メモ</th>
                 </tr>
                 ${rightColumn.map(shubo => {
                   const dayNum = calculateDayNumber(shubo.shuboStartDate, day);
@@ -654,10 +666,14 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
                   else if (dayNum === shubo.maxShuboDays) label = '卸し';
                   
                   return `<tr>
-                    <td style="text-align: center;">${saishu}</td>
+                    <td>${saishu}</td>
                     <td>${shubo.displayName}</td>
-                    <td>${dayNum}日目</td>
+                    <td>${shubo.originalData[0]?.yeast || '-'}</td>
+                    <td>${dayNum}</td>
                     <td>${label}</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
                     <td></td>
                     <td></td>
                     <td></td>
@@ -730,8 +746,8 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
     }
     body {
       font-family: 'Yu Gothic', 'Meiryo', sans-serif;
-      font-size: 8pt;
-      line-height: 1.2;
+      font-size: 7pt;
+      line-height: 1.1;
     }
     .page {
       width: 210mm;
@@ -769,7 +785,7 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
       overflow: hidden;
     }
     .env-info {
-      font-size: 7pt;
+      font-size: 6pt;
       padding: 0.5mm 1mm;
       background: #f8fafc;
       margin-bottom: 0.5mm;
@@ -801,16 +817,17 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 6pt;
+      font-size: 5pt;
     }
     th, td {
-      border: 0.3mm solid #cbd5e1;
-      padding: 0.3mm 0.5mm;
-      text-align: left;
+      border: 0.2mm solid #cbd5e1;
+      padding: 0.8mm 0.3mm;
+      text-align: center;
     }
     th {
       background: #f8fafc;
       font-weight: bold;
+      font-size: 5pt;
     }
     @media print {
       body {
