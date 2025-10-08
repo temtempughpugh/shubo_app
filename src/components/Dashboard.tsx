@@ -514,13 +514,14 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
     let daysSectionsHTML = pageDays.map(day => {
       const dateKey = getDateKey(day);
       const env = dailyEnvironment[dateKey] || { temperature: '', humidity: '' };
+      const envText = env.temperature && env.humidity 
+        ? `気温: ${env.temperature} / 湿度: ${env.humidity}` 
+        : '';
       const works = getDayWorks(day);
 
       // 仕込み準備HTML
       let prepHTML = '';
-      if (works.preparations.length === 0) {
-        prepHTML = '<div class="no-data">予定なし</div>';
-      } else {
+if (works.preparations.length > 0) {
         prepHTML = `<table>
           <tr>
             <th>酒母</th>
@@ -551,9 +552,7 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
 
       // 仕込み予定HTML
       let brewingHTML = '';
-      if (works.brewingSchedules.length === 0) {
-        brewingHTML = '<div class="no-data">予定なし</div>';
-      } else {
+   if (works.brewingSchedules.length > 0) {
         brewingHTML = `<table>
           <tr>
             <th>酒母</th>
@@ -583,9 +582,7 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
 
       // 分析予定HTML
       let analysisHTML = '';
-      if (works.analysisSchedules.length === 0) {
-        analysisHTML = '<div class="no-data">予定なし</div>';
-      } else {
+            if (works.analysisSchedules.length > 0) {
         analysisHTML = `<table>
           <tr>
             <th style="width: 5%;">採取</th>
@@ -605,7 +602,7 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
             const isSaishushu = dayNum === 2 || dayNum === shubo.maxShuboDays;
             const saishu = isSaishushu ? '○' : '';
             
-            let label = '-';
+            let label = '';
             if (dayNum === 1) label = '仕込み';
             else if (dayNum === 2) label = '打瀬';
             else if (dayNum === shubo.maxShuboDays) label = '卸し';
@@ -629,9 +626,7 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
 
       // 卸し予定HTML
       let dischargeHTML = '';
-      if (works.dischargeSchedules.length === 0) {
-        dischargeHTML = '<div class="no-data">予定なし</div>';
-      } else {
+      if (works.dischargeSchedules.length > 0) {
         dischargeHTML = `<table>
           <tr>
             <th>酒母名</th>
@@ -659,29 +654,29 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
       return `
         <div class="day-section">
           <div class="day-header">
-            <h2>📅 ${formatDateHeader(day)}</h2>
-            <div class="env-info">気温: ${env.temperature || '-'} / 湿度: ${env.humidity || '-'}</div>
+            <h2>📅 ${formatDateHeader(day)}　${envText}</h2>
+          </div>
           </div>
 
-          <div class="work-block">
+          ${prepHTML ? `<div class="work-block">
             <div class="work-block-title prep">🧪 仕込み準備（明日）</div>
             ${prepHTML}
-          </div>
+          </div>` : ''}
 
-          <div class="work-block">
+          ${brewingHTML ? `<div class="work-block">
             <div class="work-block-title brewing">🌾 仕込み予定（本日）</div>
             ${brewingHTML}
-          </div>
+          </div>` : ''}
 
-          <div class="work-block">
+          ${analysisHTML ? `<div class="work-block">
             <div class="work-block-title analysis">🔬 分析予定</div>
             ${analysisHTML}
-          </div>
+          </div>` : ''}
 
-          <div class="work-block">
+          ${dischargeHTML ? `<div class="work-block">
             <div class="work-block-title discharge">📤 卸し予定</div>
             ${dischargeHTML}
-          </div>
+          </div>` : ''}
         </div>
       `;
     }).join('');
@@ -707,13 +702,13 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
     }
     body {
       font-family: 'Yu Gothic', 'Meiryo', sans-serif;
-      font-size: 7pt;
-      line-height: 1.2;
+      font-size: 9pt;
+      line-height: 1.3;
     }
     .page {
       width: 210mm;
       height: 297mm;
-      padding: 10mm;
+      padding: 5mm;
       background: white;
       page-break-after: always;
     }
@@ -721,36 +716,36 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
       page-break-after: auto;
     }
     .day-section {
-      height: 68mm;
-      margin-bottom: 2mm;
+      height: 71mm;
+      margin-bottom: 1mm;
       border: 1px solid #cbd5e1;
-      padding: 2mm;
+      padding: 1mm;
     }
     .day-header {
       background: linear-gradient(to right, #2563eb, #1d4ed8);
       color: white;
-      padding: 1.5mm 2mm;
-      margin-bottom: 1.5mm;
+      padding: 1mm 2mm;
+      margin-bottom: 1mm;
       border-radius: 1mm;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .day-header h2 {
-      font-size: 9pt;
+      font-size: 10pt;
       font-weight: bold;
     }
     .day-header .env-info {
-      font-size: 6pt;
+      font-size: 8pt;
     }
     .work-block {
-      margin-bottom: 1mm;
+      margin-bottom: 0.8mm;
     }
     .work-block-title {
       background: #f1f5f9;
       padding: 0.5mm 1.5mm;
       font-weight: bold;
-      font-size: 6pt;
+      font-size: 8pt;
       border-left: 2px solid #2563eb;
       margin-bottom: 0.5mm;
     }
@@ -769,22 +764,16 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 5.5pt;
+      font-size: 8pt;
     }
     th, td {
       border: 0.3mm solid #cbd5e1;
-      padding: 0.5mm 1mm;
+      padding: 1mm 1.5mm;
       text-align: left;
     }
     th {
       background: #f8fafc;
       font-weight: bold;
-    }
-    .no-data {
-      color: #94a3b8;
-      font-size: 5.5pt;
-      padding: 1mm;
-      text-align: center;
     }
     @media print {
       body {
