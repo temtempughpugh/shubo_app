@@ -413,6 +413,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
     });
   }, [dataContext.mergedShuboData, currentDate]);
 
+
   const handleScheduleExport = () => {
   if (!scheduleStartDate || !scheduleEndDate) {
     alert('開始日と終了日を選択してください');
@@ -514,14 +515,13 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
     let daysSectionsHTML = pageDays.map(day => {
       const dateKey = getDateKey(day);
       const env = dailyEnvironment[dateKey] || { temperature: '', humidity: '' };
-      const envText = env.temperature && env.humidity 
-        ? `気温: ${env.temperature} / 湿度: ${env.humidity}` 
-        : '';
       const works = getDayWorks(day);
 
       // 仕込み準備HTML
       let prepHTML = '';
-if (works.preparations.length > 0) {
+      if (works.preparations.length === 0) {
+        prepHTML = '<div class="no-data">予定なし</div>';
+      } else {
         prepHTML = `<table>
           <tr>
             <th>酒母</th>
@@ -552,7 +552,9 @@ if (works.preparations.length > 0) {
 
       // 仕込み予定HTML
       let brewingHTML = '';
-   if (works.brewingSchedules.length > 0) {
+      if (works.brewingSchedules.length === 0) {
+        brewingHTML = '<div class="no-data">予定なし</div>';
+      } else {
         brewingHTML = `<table>
           <tr>
             <th>酒母</th>
@@ -582,7 +584,9 @@ if (works.preparations.length > 0) {
 
       // 分析予定HTML
       let analysisHTML = '';
-            if (works.analysisSchedules.length > 0) {
+      if (works.analysisSchedules.length === 0) {
+        analysisHTML = '<div class="no-data">予定なし</div>';
+      } else {
         analysisHTML = `<table>
           <tr>
             <th style="width: 5%;">採取</th>
@@ -602,7 +606,7 @@ if (works.preparations.length > 0) {
             const isSaishushu = dayNum === 2 || dayNum === shubo.maxShuboDays;
             const saishu = isSaishushu ? '○' : '';
             
-            let label = '';
+            let label = '-';
             if (dayNum === 1) label = '仕込み';
             else if (dayNum === 2) label = '打瀬';
             else if (dayNum === shubo.maxShuboDays) label = '卸し';
@@ -626,7 +630,9 @@ if (works.preparations.length > 0) {
 
       // 卸し予定HTML
       let dischargeHTML = '';
-      if (works.dischargeSchedules.length > 0) {
+      if (works.dischargeSchedules.length === 0) {
+        dischargeHTML = '<div class="no-data">予定なし</div>';
+      } else {
         dischargeHTML = `<table>
           <tr>
             <th>酒母名</th>
@@ -654,29 +660,29 @@ if (works.preparations.length > 0) {
       return `
         <div class="day-section">
           <div class="day-header">
-            <h2>📅 ${formatDateHeader(day)}　${envText}</h2>
-          </div>
+            <h2>📅 ${formatDateHeader(day)}</h2>
+            <div class="env-info">気温: ${env.temperature || '-'} / 湿度: ${env.humidity || '-'}</div>
           </div>
 
-          ${prepHTML ? `<div class="work-block">
+          <div class="work-block">
             <div class="work-block-title prep">🧪 仕込み準備（明日）</div>
             ${prepHTML}
-          </div>` : ''}
+          </div>
 
-          ${brewingHTML ? `<div class="work-block">
+          <div class="work-block">
             <div class="work-block-title brewing">🌾 仕込み予定（本日）</div>
             ${brewingHTML}
-          </div>` : ''}
+          </div>
 
-          ${analysisHTML ? `<div class="work-block">
+          <div class="work-block">
             <div class="work-block-title analysis">🔬 分析予定</div>
             ${analysisHTML}
-          </div>` : ''}
+          </div>
 
-          ${dischargeHTML ? `<div class="work-block">
+          <div class="work-block">
             <div class="work-block-title discharge">📤 卸し予定</div>
             ${dischargeHTML}
-          </div>` : ''}
+          </div>
         </div>
       `;
     }).join('');
@@ -716,16 +722,16 @@ if (works.preparations.length > 0) {
       page-break-after: auto;
     }
     .day-section {
-      height: 71mm;
-      margin-bottom: 1mm;
+      height: 68mm;
+      margin-bottom: 2mm;
       border: 1px solid #cbd5e1;
-      padding: 1mm;
+      padding: 2mm;
     }
     .day-header {
       background: linear-gradient(to right, #2563eb, #1d4ed8);
       color: white;
-      padding: 1mm 2mm;
-      margin-bottom: 1mm;
+      padding: 1.5mm 2mm;
+      margin-bottom: 1.5mm;
       border-radius: 1mm;
       display: flex;
       justify-content: space-between;
@@ -735,17 +741,14 @@ if (works.preparations.length > 0) {
       font-size: 10pt;
       font-weight: bold;
     }
-    .day-header .env-info {
-      font-size: 8pt;
-    }
     .work-block {
-      margin-bottom: 0.8mm;
+      margin-bottom: 1mm;
     }
     .work-block-title {
       background: #f1f5f9;
       padding: 0.5mm 1.5mm;
       font-weight: bold;
-      font-size: 8pt;
+      font-size: 6pt;
       border-left: 2px solid #2563eb;
       margin-bottom: 0.5mm;
     }
@@ -764,11 +767,11 @@ if (works.preparations.length > 0) {
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 8pt;
+      font-size: 9pt;
     }
     th, td {
       border: 0.3mm solid #cbd5e1;
-      padding: 1mm 1.5mm;
+      padding: 0.5mm 1mm;
       text-align: left;
     }
     th {
@@ -782,7 +785,7 @@ if (works.preparations.length > 0) {
       }
       .page {
         margin: 0;
-        padding: 10mm;
+        padding: 5mm;
       }
     }
   </style>
@@ -793,7 +796,6 @@ if (works.preparations.length > 0) {
 </html>
   `;
 };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -1857,7 +1859,6 @@ if (works.preparations.length > 0) {
             </table>
           </div>
         </div>
-
 <div className="bg-white rounded-xl shadow-lg border border-slate-200/50 overflow-hidden">
           <div className="bg-indigo-600 px-4 py-2">
             <h3 className="text-base font-bold text-white">📋 予定表出力</h3>
