@@ -514,7 +514,7 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
     
     const daysSectionsHTML = pageDays.map(day => {
       const dateKey = getDateKey(day);
-      const env = dailyEnvironment[dateKey] || { temperature: '', humidity: '' };
+      const env = dataContext.dailyEnvironment[dateKey] || { temperature: '', humidity: '' };
       const works = getDayWorks(day);
 
       let contentHTML = '';
@@ -613,7 +613,7 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
 .section-title{background:#f1f5f9;padding:0.3mm 1mm;font-weight:bold;font-size:6pt;border-left:2px solid #f97316;margin-bottom:0.3mm}
 .two-column-grid{display:grid;grid-template-columns:1fr 1fr;gap:1mm}
 .data-table{width:100%;border-collapse:collapse;font-size:5pt}
-.data-table th,.data-table td{border:0.2mm solid #cbd5e1;padding:1mm 0.3mm;text-align:center}
+.data-table th,.data-table td{border:0.2mm solid #cbd5e1;padding:3mm 0.3mm;text-align:center}
 .data-table th{background:#f8fafc;font-weight:bold;font-size:5pt}
 @media print{body{margin:0;padding:0}.page{margin:0;padding:5mm}}
 </style>
