@@ -592,19 +592,16 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
       if (works.preparations.length > 0) {
         const sectionClass = singleWork ? 'work-section work-section-half-upper' : 'work-section';
         contentHTML += `<div class="${sectionClass}"><div class="section-title">仕込み準備（明日）</div>`;
-        contentHTML += '<table class="work-table-prep"><tr><th colspan="4">項目 / 値</th></tr>';
+        contentHTML += '<table class="work-table-prep">';
         
         works.preparations.forEach(shubo => {
           const waterAmount = shubo.recipeData.water;
           const lacticAcidAmount = shubo.recipeData.lacticAcid;
           const kojiStorage = shubo.originalData[0]?.shuboStorage || '';
-          contentHTML += `<tr><td class="item-label">酒母</td><td colspan="3">${shubo.displayName}</td></tr>`;
-          contentHTML += `<tr><td class="item-label">タンク</td><td colspan="3">${shubo.selectedTankId}</td></tr>`;
-          contentHTML += `<tr><td class="item-label">酵母</td><td>${shubo.originalData[0]?.yeast || '-'}</td><td class="item-label">麹</td><td>${kojiStorage}</td><td class="item-label">乳酸</td><td>${lacticAcidAmount}ml</td></tr>`;
-          contentHTML += `<tr><td class="item-label">汲み水</td><td colspan="3">${waterAmount}L</td></tr>`;
-          contentHTML += `<tr><td class="item-label">氷量</td><td colspan="3"></td></tr>`;
-          contentHTML += `<tr><td class="item-label">準備水</td><td colspan="3"></td></tr>`;
-          contentHTML += `<tr><td class="item-label">尺</td><td colspan="3"></td></tr>`;
+          contentHTML += `<tr><td class="item-label">酒母</td><td>${shubo.displayName}</td><td class="item-label">タンク</td><td>${shubo.selectedTankId}</td></tr>`;
+          contentHTML += `<tr class="six-col"><td class="item-label">酵母</td><td>${shubo.originalData[0]?.yeast || '-'}</td><td class="item-label">麹</td><td>${kojiStorage}</td><td class="item-label">乳酸</td><td>${lacticAcidAmount}ml</td></tr>`;
+          contentHTML += `<tr><td class="item-label">汲み水</td><td>${waterAmount}L</td><td class="item-label">氷量</td><td></td></tr>`;
+          contentHTML += `<tr><td class="item-label">準備水</td><td></td><td class="item-label">尺</td><td></td></tr>`;
         });
         
         contentHTML += '</table></div>';
@@ -709,11 +706,10 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
 .work-table th{background:#777;color:white;padding:0.5mm;border:0.2mm solid #64748b;font-weight:bold;text-align:center;font-size:7pt}
 .work-table td{border:0.2mm solid #cbd5e1;padding:0.5mm;text-align:center;font-size:7pt}
 .work-table td.item-label{font-weight:bold;font-size:7pt}
-.work-table-prep{width:100%;border-collapse:collapse;font-size:7pt;flex:1;table-layout:fixed}
-.work-table-prep th{background:#777;color:white;padding:0.5mm;border:0.2mm solid #64748b;font-weight:bold;text-align:center;font-size:7pt}
+.work-table-prep{width:100%;border-collapse:collapse;font-size:7pt;flex:1}
 .work-table-prep td{border:0.2mm solid #cbd5e1;padding:0.5mm;text-align:center;font-size:7pt}
-.work-table-prep td.item-label{font-weight:bold;font-size:7pt;width:15%}
-.work-table-prep tr:nth-child(3) td:nth-child(2),.work-table-prep tr:nth-child(3) td:nth-child(4),.work-table-prep tr:nth-child(3) td:nth-child(6){width:14.1%}
+.work-table-prep td.item-label{font-weight:bold;font-size:7pt}
+.work-table-prep tr.six-col td{width:16.66%}
 @media print{body{margin:0;padding:0}.page{margin:0;padding:5mm}}
 </style>
 </head>
