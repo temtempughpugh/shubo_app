@@ -547,10 +547,25 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
   for (let i = 0; i < days.length; i += 4) {
     const pageDays = days.slice(i, i + 4);
     
+    const dayAnalysisCounts = pageDays.map(day => {
+      const works = getDayWorks(day);
+      return works.analysisSchedules.length;
+    });
+    
+    const maxCount = Math.max(...dayAnalysisCounts);
+    const needsDynamicHeight = maxCount > 5;
+    
     const daysSectionsHTML = pageDays.map(day => {
       const dateKey = getDateKey(day);
       const env = dataContext.dailyEnvironment[dateKey] || { temperature: '', humidity: '' };
       const works = getDayWorks(day);
+      
+      let dayBoxHeight = '71.25mm';
+      if (needsDynamicHeight && works.analysisSchedules.length > 5) {
+        const additionalRows = works.analysisSchedules.length - 5;
+        const calculatedHeight = 71.25 + (additionalRows * 5);
+        dayBoxHeight = `${calculatedHeight}mm`;
+      }
 
       let contentHTML = '';
 
@@ -560,7 +575,6 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
 
       contentHTML += '<div class="main-grid">';
 
-      // 左半分: 分析予定
       if (works.analysisSchedules.length > 0) {
         contentHTML += '<div class="left-half"><div class="section-title">分析予定</div>';
         contentHTML += '<table class="analysis-table"><tr><th>採取</th><th>酒母名</th><th>酵母</th><th>ラベル</th><th>日数</th><th>品温</th><th>ボーメ</th><th>酸度</th><th>品温2</th><th>メモ</th></tr>';
@@ -583,7 +597,6 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
         contentHTML += '<div class="left-half"></div>';
       }
 
-      // 右半分: 作業予定
       const workCount = (works.preparations.length > 0 ? 1 : 0) + (works.brewingSchedules.length > 0 ? 1 : 0) + (works.dischargeSchedules.length > 0 ? 1 : 0);
       const singleWork = workCount === 1;
       
@@ -665,7 +678,7 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
 
       contentHTML += '</div></div>';
 
-      return `<div class="day-box"><div class="date-column">${formatDateHeader(day)}</div><div class="content-column">${contentHTML}</div></div>`;
+      return `<div class="day-box" style="height:${dayBoxHeight}"><div class="date-column">${formatDateHeader(day)}</div><div class="content-column">${contentHTML}</div></div>`;
     }).join('');
 
     pagesHTML += `<div class="page">${daysSectionsHTML}</div>`;
@@ -682,7 +695,7 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
 body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
 .page{width:210mm;height:297mm;padding:5mm;background:white;page-break-after:always}
 .page:last-child{page-break-after:auto}
-.day-box{height:71.25mm;border:1px solid #cbd5e1;margin-bottom:1mm;display:flex;overflow:hidden}
+.day-box{border:1px solid #cbd5e1;margin-bottom:1mm;display:flex;overflow:hidden}
 .date-column{writing-mode:vertical-rl;background:#666;color:white;padding:2mm 1mm;font-weight:bold;font-size:8pt;width:12mm;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .content-column{flex:1;overflow:hidden;display:flex;flex-direction:column}
 .env-bar{font-size:6pt;padding:0.5mm 1mm;background:#f0f0f0;margin-bottom:0.5mm;border-left:2px solid #999;flex-shrink:0}
