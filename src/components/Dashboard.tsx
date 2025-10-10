@@ -528,7 +528,7 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
         : new Date(lastEndDate);
       endDate.setHours(0, 0, 0, 0);
       
-      return date >= startDate && date <= endDate;
+      return date > startDate && date <= endDate;
     });
 
     const dischargeSchedules = dataContext.mergedShuboData.filter(shubo => {
