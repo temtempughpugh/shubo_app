@@ -517,18 +517,11 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
     });
 
     const analysisSchedules = dataContext.mergedShuboData.filter(shubo => {
-      const startDate = shubo.shuboStartDate instanceof Date 
-        ? new Date(shubo.shuboStartDate) 
-        : new Date(shubo.shuboStartDate);
-      startDate.setHours(0, 0, 0, 0);
+      const status = getStatusForMerged(shubo, date);
+      if (status !== '管理中') return false;
       
-      const lastEndDate = shubo.shuboEndDates[shubo.shuboEndDates.length - 1];
-      const endDate = lastEndDate instanceof Date 
-        ? new Date(lastEndDate) 
-        : new Date(lastEndDate);
-      endDate.setHours(0, 0, 0, 0);
-      
-      return date > startDate && date <= endDate;
+      const dayNum = calculateDayNumber(shubo.shuboStartDate, date);
+      return dayNum > 1;
     });
 
     const dischargeSchedules = dataContext.mergedShuboData.filter(shubo => {
@@ -540,6 +533,26 @@ const generateScheduleHTML = (startDate: Date, endDate: Date): string => {
     });
 
     return { preparations, brewingSchedules, analysisSchedules, dischargeSchedules };
+  };
+
+  const getStatusForMerged = (shubo: MergedShuboData, targetDate: Date): string => {
+    const today = new Date(targetDate);
+    today.setHours(0, 0, 0, 0);
+    
+    const startDate = shubo.shuboStartDate instanceof Date 
+      ? new Date(shubo.shuboStartDate) 
+      : new Date(shubo.shuboStartDate);
+    startDate.setHours(0, 0, 0, 0);
+    
+    const lastEndDate = shubo.shuboEndDates[shubo.shuboEndDates.length - 1];
+    const endDate = lastEndDate instanceof Date 
+      ? new Date(lastEndDate) 
+      : new Date(lastEndDate);
+    endDate.setHours(0, 0, 0, 0);
+
+    if (today < startDate) return '準備中';
+    if (today >= startDate && today <= endDate) return '管理中';
+    return '完了';
   };
 
   let pagesHTML = '';
