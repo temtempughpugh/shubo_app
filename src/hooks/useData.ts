@@ -107,8 +107,35 @@ async function importFromSupabaseStorage() {
       const { data: csvData } = await supabase.storage.from('csv-data').download('shubo.csv')
       if (csvData) {
         const text = await csvData.text()
-        const lines = text.split('\n').filter(line => line.trim()).map(line => line.split(','))
-        const parsed = parseShuboCSV(lines)
+const lines = text.split('\n').filter(line => line.trim())
+// ダブルクォートで囲まれたカンマを正しく処理
+const parsedLines = lines.map(line => {
+  const values: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      values.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  
+  values.push(current.trim());
+  return values;
+});
+const parsed = parseShuboCSV(parsedLines)
         if (parsed.length > 0) {
           await saveShuboRawData(parsed)
           console.log(`✓ shubo.csv: ${parsed.length}件インポート完了`)
