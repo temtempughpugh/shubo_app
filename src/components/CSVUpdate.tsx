@@ -163,29 +163,72 @@ newShuboData.forEach(shubo => {
     );
 
     const updatedConfigured = preview.toUpdate.map(key => {
-      const { shuboNumber, fiscalYear } = parseShuboKey(key);
-      const existing = currentConfigured.find(c => 
-        c.shuboNumber === shuboNumber && c.fiscalYear === fiscalYear
-      );
-      const newRaw = newShuboData.find(s => 
-        s.shuboNumber === shuboNumber && s.fiscalYear === fiscalYear
-      );
-      
-      if (!newRaw) return null;
-      
-      if (existing) {
-        return {
-          ...existing,
-          shuboStartDate: convertExcelDateToJs(parseFloat(newRaw.shuboStartDate)),
-          shuboEndDate: convertExcelDateToJs(parseFloat(newRaw.shuboEndDate)),
-          shuboDays: newRaw.shuboDays,
-          fiscalYear: newRaw.fiscalYear,
-          originalData: newRaw,
-        };
-      }
-      
-      return null;
-    }).filter(Boolean);
+  const { shuboNumber, fiscalYear } = parseShuboKey(key);
+  const existing = currentConfigured.find(c => 
+    c.shuboNumber === shuboNumber && c.fiscalYear === fiscalYear
+  );
+  const newRaw = newShuboData.find(s => 
+    s.shuboNumber === shuboNumber && s.fiscalYear === fiscalYear
+  );
+  
+  if (!newRaw) return null;
+  
+  if (existing) {
+    // 既存データを更新
+    return {
+      ...existing,
+      shuboStartDate: convertExcelDateToJs(parseFloat(newRaw.shuboStartDate)),
+      shuboEndDate: convertExcelDateToJs(parseFloat(newRaw.shuboEndDate)),
+      shuboDays: newRaw.shuboDays,
+      fiscalYear: newRaw.fiscalYear,
+      originalData: newRaw,
+    };
+  }
+  
+  // 新規データを作成
+  const recipe = dataContext.recipeRawData.find(r => 
+    r.shuboType === newRaw.brewingCategory && 
+    r.recipeBrewingScale === newRaw.brewingScale
+  );
+  
+  if (!recipe) {
+    console.warn(`レシピが見つかりません: ${shuboNumber}号`);
+    return null;
+  }
+  
+  return {
+    shuboNumber: newRaw.shuboNumber,
+    displayName: `${newRaw.shuboNumber}号`,
+    selectedTankId: '',  // タンク未割り当て
+    shuboType: newRaw.brewingCategory,
+    shuboStartDate: convertExcelDateToJs(parseFloat(newRaw.shuboStartDate)),
+    shuboEndDate: convertExcelDateToJs(parseFloat(newRaw.shuboEndDate)),
+    shuboDays: newRaw.shuboDays,
+    fiscalYear: newRaw.fiscalYear,
+    recipeData: {
+      totalRice: recipe.recipeTotalRice,
+      steamedRice: recipe.steamedRice,
+      kojiRice: recipe.kojiRice,
+      water: recipe.water,
+      measurement: recipe.measurement,
+      lacticAcid: recipe.lacticAcid
+    },
+    tankData: {
+      tankDisplayName: '',
+      maxCapacity: 0,
+      waterKensyaku: 0,
+      waterCapacity: 0
+    },
+    originalData: newRaw,
+    dualShuboInfo: {
+      isDualShubo: false,
+      isPrimary: true,
+      primaryNumber: newRaw.shuboNumber,
+      secondaryNumber: undefined,
+      combinedDisplayName: `${newRaw.shuboNumber}号`
+    }
+  };
+}).filter(Boolean);
 
     const mergedConfigured = [...keptConfigured, ...updatedConfigured];
     const updatedWithDualInfo = updateDualShuboDisplayNames(mergedConfigured);
