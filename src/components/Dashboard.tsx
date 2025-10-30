@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef,useEffect } from 'react';
 import type {
   ConfiguredShuboData,
   DailyRecordData,
@@ -33,6 +33,9 @@ interface DashboardProps {
 
 
 export default function Dashboard({ dataContext }: DashboardProps) {
+  useEffect(() => {
+    (window as any).dataContext = dataContext;
+  }, [dataContext]);
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [expandedShubo, setExpandedShubo] = useState<number | null>(null);
