@@ -1184,42 +1184,44 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
       <td className="px-2 py-2 text-xs">{waterDisplay}</td>
       <td className="px-2 py-2">
                             <input 
-                              type="number" 
-                              value={iceAmount} 
-                              onChange={(e) => updateBrewingInput(
-                                shubo.primaryNumber,
-                                shubo.fiscalYear,
-                                'iceAmount',
-                                e.target.value ? parseFloat(e.target.value) : null
-                              )}
-                              onBlur={async (e) => {
-                                const key = `${shubo.primaryNumber}-${shubo.fiscalYear}`;
-                                const timerKey = `brewing-prep-${key}`;
-                                const existingTimer = debounceTimers.current.get(timerKey);
-                                if (existingTimer) {
-                                  clearTimeout(existingTimer);
-                                  debounceTimers.current.delete(timerKey);
-                                }
-                                const mergedUpdates = localBrewingUpdates.get(key) || {};
-                                const value = e.target.value ? parseFloat(e.target.value) : null;
-                                
-                               
-                                
-                                await dataContext.saveBrewingPreparation(
-                                  shubo.primaryNumber,
-                                  shubo.fiscalYear,
-                                  {
-                                    ...brewingInput[key],
-                                    ...mergedUpdates,
-                                    iceAmount: value
-                                  }
-                                );
-                                
-                             
-                              }}
-                              placeholder="0" 
-                              className="w-14 px-1 py-1 text-xs border rounded" 
-                            />
+  type="number" 
+  value={iceAmount} 
+  onChange={(e) => updateBrewingInput(
+    shubo.primaryNumber,
+    shubo.fiscalYear,
+    'iceAmount',
+    e.target.value ? parseFloat(e.target.value) : null
+  )}
+  onBlur={async (e) => {
+    const key = `${shubo.primaryNumber}-${shubo.fiscalYear}`;
+    const timerKey = `brewing-prep-${key}`;
+    const existingTimer = debounceTimers.current.get(timerKey);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      debounceTimers.current.delete(timerKey);
+    }
+    const mergedUpdates = localBrewingUpdates.get(key) || {};
+    const value = e.target.value ? parseFloat(e.target.value) : null;
+    
+    await dataContext.saveBrewingPreparation(
+      shubo.primaryNumber,
+      shubo.fiscalYear,
+      {
+        ...brewingInput[key],
+        ...mergedUpdates,
+        iceAmount: value
+      }
+    );
+    
+    setLocalBrewingUpdates(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(key);
+      return newMap;
+    });
+  }}
+  placeholder="0" 
+  className="w-14 px-1 py-1 text-xs border rounded" 
+/>
                           </td>
                             <td className="px-2 py-2 text-green-700 font-bold text-xs">
                               {iceAmount ? `${preparationWater}L` : '-'}
@@ -1354,42 +1356,44 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
                             <td className="px-2 py-2 text-xs">{measurementDisplay}</td>
                             <td className="px-2 py-2">
                             <input 
-                              type="number" 
-                              value={afterBrewingKensyaku} 
-                              onChange={(e) => updateBrewingInput(
-                                shubo.primaryNumber,
-                                shubo.fiscalYear,
-                                'afterBrewingKensyaku',
-                                e.target.value ? parseFloat(e.target.value) : null
-                              )}
-                              onBlur={async (e) => {
-                                const key = `${shubo.primaryNumber}-${shubo.fiscalYear}`;
-                                const timerKey = `brewing-prep-${key}`;
-                                const existingTimer = debounceTimers.current.get(timerKey);
-                                if (existingTimer) {
-                                  clearTimeout(existingTimer);
-                                  debounceTimers.current.delete(timerKey);
-                                }
-                                const mergedUpdates = localBrewingUpdates.get(key) || {};
-                                const value = e.target.value ? parseFloat(e.target.value) : null;
-                                
-                               
-                                
-                                await dataContext.saveBrewingPreparation(
-                                  shubo.primaryNumber,
-                                  shubo.fiscalYear,
-                                  {
-                                    ...brewingInput[key],
-                                    ...mergedUpdates,
-                                    afterBrewingKensyaku: value
-                                  }
-                                );
-                                
-                              
-                              }}
-                              placeholder="300" 
-                              className="w-14 px-1 py-1 text-xs border rounded" 
-                            />
+  type="number" 
+  value={afterBrewingKensyaku} 
+  onChange={(e) => updateBrewingInput(
+    shubo.primaryNumber,
+    shubo.fiscalYear,
+    'afterBrewingKensyaku',
+    e.target.value ? parseFloat(e.target.value) : null
+  )}
+  onBlur={async (e) => {
+    const key = `${shubo.primaryNumber}-${shubo.fiscalYear}`;
+    const timerKey = `brewing-prep-${key}`;
+    const existingTimer = debounceTimers.current.get(timerKey);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      debounceTimers.current.delete(timerKey);
+    }
+    const mergedUpdates = localBrewingUpdates.get(key) || {};
+    const value = e.target.value ? parseFloat(e.target.value) : null;
+    
+    await dataContext.saveBrewingPreparation(
+      shubo.primaryNumber,
+      shubo.fiscalYear,
+      {
+        ...brewingInput[key],
+        ...mergedUpdates,
+        afterBrewingKensyaku: value
+      }
+    );
+    
+    setLocalBrewingUpdates(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(key);
+      return newMap;
+    });
+  }}
+  placeholder="300" 
+  className="w-14 px-1 py-1 text-xs border rounded" 
+/>
                           </td>
                             <td className="px-2 py-2 text-green-700 font-bold text-xs">
                               {capacity ? `${capacity}L` : '-'}
@@ -1490,95 +1494,92 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
                           <td className="px-3 py-2">{shubo.selectedTankId}</td>
                           <td className="px-3 py-2">
                             <input 
-                              type="number" 
-                              value={beforeDischargeKensyaku} 
-                              onChange={(e) => updateDischargeInput(
-                                shubo.primaryNumber,
-                                shubo.fiscalYear,
-                                dischargeIndex + 1,
-                                'beforeDischargeKensyaku',
-                                e.target.value ? parseFloat(e.target.value) : null
-                              )}
-                              onBlur={async (e) => {
-                                const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${dischargeIndex + 1}`;
-                                const timerKey = `discharge-${key}`;
-                                const existingTimer = debounceTimers.current.get(timerKey);
-                                if (existingTimer) {
-                                  clearTimeout(existingTimer);
-                                  debounceTimers.current.delete(timerKey);
-                                }
-                                const mergedUpdates = localDischargeUpdates.get(key) || {};
-                                const value = e.target.value ? parseFloat(e.target.value) : null;
-                                
-                                setLocalDischargeUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.set(key, { ...mergedUpdates, beforeDischargeKensyaku: value });
-                                  return newMap;
-                                });
-                                
-                                await dataContext.saveDischargeSchedule(
-                                  shubo.primaryNumber,
-                                  shubo.fiscalYear,
-                                  dischargeIndex + 1,
-                                  {
-                                    ...dischargeInput[key],
-                                    ...mergedUpdates,
-                                    beforeDischargeKensyaku: value
-                                  }
-                                );
-                                
-                            
-                              }}
-                              placeholder="250" 
-                              className="w-16 px-2 py-1 text-sm border rounded" 
-                            />
+  type="number" 
+  value={beforeDischargeKensyaku} 
+  onChange={(e) => updateDischargeInput(
+    shubo.primaryNumber,
+    shubo.fiscalYear,
+    dischargeIndex + 1,
+    'beforeDischargeKensyaku',
+    e.target.value ? parseFloat(e.target.value) : null
+  )}
+  onBlur={async (e) => {
+    const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${dischargeIndex + 1}`;
+    const timerKey = `discharge-${key}`;
+    const existingTimer = debounceTimers.current.get(timerKey);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      debounceTimers.current.delete(timerKey);
+    }
+    const mergedUpdates = localDischargeUpdates.get(key) || {};
+    const value = e.target.value ? parseFloat(e.target.value) : null;
+    
+    await dataContext.saveDischargeSchedule(
+      shubo.primaryNumber,
+      shubo.fiscalYear,
+      dischargeIndex + 1,
+      {
+        ...dischargeInput[key],
+        ...mergedUpdates,
+        beforeDischargeKensyaku: value
+      }
+    );
+    
+    setLocalDischargeUpdates(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(key);
+      return newMap;
+    });
+  }}
+  placeholder="250" 
+  className="w-16 px-2 py-1 text-sm border rounded" 
+/>
                           </td>
                           <td className="px-3 py-2 text-green-700 font-bold">
                             {beforeCapacity ? `${beforeCapacity}L` : '-'}
                           </td>
                           <td className="px-3 py-2">
                             <input 
-                              type="number" 
-                              value={afterDischargeCapacity} 
-                              onChange={(e) => updateDischargeInput(
-                                shubo.primaryNumber,
-                                shubo.fiscalYear,
-                                dischargeIndex + 1,
-                                'afterDischargeCapacity',
-                                e.target.value !== '' ? parseFloat(e.target.value) : null
-                              )}
-                              onBlur={async (e) => {
-                                const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${dischargeIndex + 1}`;
-                                const timerKey = `discharge-${key}`;
-                                const existingTimer = debounceTimers.current.get(timerKey);
-                                if (existingTimer) {
-                                  clearTimeout(existingTimer);
-                                  debounceTimers.current.delete(timerKey);
-                                }
-                                const mergedUpdates = localDischargeUpdates.get(key) || {};
-                                const value = e.target.value !== '' ? parseFloat(e.target.value) : null;
-                                
-                                setLocalDischargeUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.set(key, { ...mergedUpdates, afterDischargeCapacity: value });
-                                  return newMap;
-                                });
-                                
-                                await dataContext.saveDischargeSchedule(
-                                  shubo.primaryNumber,
-                                  shubo.fiscalYear,
-                                  dischargeIndex + 1,
-                                  {
-                                    ...dischargeInput[key],
-                                    ...mergedUpdates,
-                                    afterDischargeCapacity: value
-                                  }
-                                );
-                                
-                              }}
-                              placeholder="200" 
-                              className="w-16 px-2 py-1 text-sm border rounded" 
-                            />
+  type="number" 
+  value={afterDischargeCapacity} 
+  onChange={(e) => updateDischargeInput(
+    shubo.primaryNumber,
+    shubo.fiscalYear,
+    dischargeIndex + 1,
+    'afterDischargeCapacity',
+    e.target.value !== '' ? parseFloat(e.target.value) : null
+  )}
+  onBlur={async (e) => {
+    const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${dischargeIndex + 1}`;
+    const timerKey = `discharge-${key}`;
+    const existingTimer = debounceTimers.current.get(timerKey);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      debounceTimers.current.delete(timerKey);
+    }
+    const mergedUpdates = localDischargeUpdates.get(key) || {};
+    const value = e.target.value !== '' ? parseFloat(e.target.value) : null;
+    
+    await dataContext.saveDischargeSchedule(
+      shubo.primaryNumber,
+      shubo.fiscalYear,
+      dischargeIndex + 1,
+      {
+        ...dischargeInput[key],
+        ...mergedUpdates,
+        afterDischargeCapacity: value
+      }
+    );
+    
+    setLocalDischargeUpdates(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(key);
+      return newMap;
+    });
+  }}
+  placeholder="200" 
+  className="w-16 px-2 py-1 text-sm border rounded" 
+/>
                           </td>
                           <td className="px-3 py-2 text-slate-700">
                             {afterKensyaku !== null ? `${afterKensyaku}mm` : '-'}
@@ -1588,48 +1589,46 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
                           </td>
                           <td className="px-3 py-2">
                             <select
-                              value={destinationTank}
-                              onChange={async (e) => {
-                                await updateDischargeInput(
-                                  shubo.primaryNumber,
-                                  shubo.fiscalYear,
-                                  dischargeIndex + 1,
-                                  'destinationTank',
-                                  e.target.value
-                                );
-                              }}
-                              onBlur={async (e) => {
-                                const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${dischargeIndex + 1}`;
-                                const timerKey = `discharge-${key}`;
-                                const existingTimer = debounceTimers.current.get(timerKey);
-                                if (existingTimer) {
-                                  clearTimeout(existingTimer);
-                                  debounceTimers.current.delete(timerKey);
-                                }
-                                const mergedUpdates = localDischargeUpdates.get(key) || {};
-                                const value = e.target.value;
-                                
-                                setLocalDischargeUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.set(key, { ...mergedUpdates, destinationTank: value });
-                                  return newMap;
-                                });
-                                
-                                await dataContext.saveDischargeSchedule(
-                                  shubo.primaryNumber,
-                                  shubo.fiscalYear,
-                                  dischargeIndex + 1,
-                                  {
-                                    ...dischargeInput[key],
-                                    ...mergedUpdates,
-                                    destinationTank: value
-                                  }
-                                );
-                                
-                              
-                              }}
-                              className="w-24 px-2 py-1 text-sm border rounded"
-                            >
+  value={destinationTank}
+  onChange={async (e) => {
+    await updateDischargeInput(
+      shubo.primaryNumber,
+      shubo.fiscalYear,
+      dischargeIndex + 1,
+      'destinationTank',
+      e.target.value
+    );
+  }}
+  onBlur={async (e) => {
+    const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${dischargeIndex + 1}`;
+    const timerKey = `discharge-${key}`;
+    const existingTimer = debounceTimers.current.get(timerKey);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      debounceTimers.current.delete(timerKey);
+    }
+    const mergedUpdates = localDischargeUpdates.get(key) || {};
+    const value = e.target.value;
+    
+    await dataContext.saveDischargeSchedule(
+      shubo.primaryNumber,
+      shubo.fiscalYear,
+      dischargeIndex + 1,
+      {
+        ...dischargeInput[key],
+        ...mergedUpdates,
+        destinationTank: value
+      }
+    );
+    
+    setLocalDischargeUpdates(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(key);
+      return newMap;
+    });
+  }}
+  className="w-24 px-2 py-1 text-sm border rounded"
+>
                               <option value="">選択</option>
                               {dataContext.tankConfigData
                                 .map((tank: any) => (
@@ -1644,48 +1643,46 @@ body{font-family:'Yu Gothic','Meiryo',sans-serif;font-size:7pt;line-height:1.1}
                           </td>
                           <td className="px-3 py-2">
                             <input 
-                              type="number" 
-                              value={iceAmount} 
-                              onChange={(e) => updateDischargeInput(
-                                shubo.primaryNumber,
-                                shubo.fiscalYear,
-                                dischargeIndex + 1,
-                                'iceAmount',
-                                e.target.value ? parseFloat(e.target.value) : null
-                              )}
-                              onBlur={async (e) => {
-                                const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${dischargeIndex + 1}`;
-                                const timerKey = `discharge-${key}`;
-                                const existingTimer = debounceTimers.current.get(timerKey);
-                                if (existingTimer) {
-                                  clearTimeout(existingTimer);
-                                  debounceTimers.current.delete(timerKey);
-                                }
-                                const mergedUpdates = localDischargeUpdates.get(key) || {};
-                                const value = e.target.value ? parseFloat(e.target.value) : null;
-                                
-                                setLocalDischargeUpdates(prev => {
-                                  const newMap = new Map(prev);
-                                  newMap.set(key, { ...mergedUpdates, iceAmount: value });
-                                  return newMap;
-                                });
-                                
-                                await dataContext.saveDischargeSchedule(
-                                  shubo.primaryNumber,
-                                  shubo.fiscalYear,
-                                  dischargeIndex + 1,
-                                  {
-                                    ...dischargeInput[key],
-                                    ...mergedUpdates,
-                                    iceAmount: value
-                                  }
-                                );
-                                
-                           
-                              }}
-                              placeholder="0" 
-                              className="w-16 px-2 py-1 text-sm border rounded" 
-                            />
+  type="number" 
+  value={iceAmount} 
+  onChange={(e) => updateDischargeInput(
+    shubo.primaryNumber,
+    shubo.fiscalYear,
+    dischargeIndex + 1,
+    'iceAmount',
+    e.target.value ? parseFloat(e.target.value) : null
+  )}
+  onBlur={async (e) => {
+    const key = `${shubo.primaryNumber}-${shubo.fiscalYear}-${dischargeIndex + 1}`;
+    const timerKey = `discharge-${key}`;
+    const existingTimer = debounceTimers.current.get(timerKey);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      debounceTimers.current.delete(timerKey);
+    }
+    const mergedUpdates = localDischargeUpdates.get(key) || {};
+    const value = e.target.value ? parseFloat(e.target.value) : null;
+    
+    await dataContext.saveDischargeSchedule(
+      shubo.primaryNumber,
+      shubo.fiscalYear,
+      dischargeIndex + 1,
+      {
+        ...dischargeInput[key],
+        ...mergedUpdates,
+        iceAmount: value
+      }
+    );
+    
+    setLocalDischargeUpdates(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(key);
+      return newMap;
+    });
+  }}
+  placeholder="0" 
+  className="w-16 px-2 py-1 text-sm border rounded" 
+/>
                           </td>
                           <td className="px-3 py-2 text-green-700 font-bold">
                             {preparationSoeWater !== null ? `${preparationSoeWater}L` : '-'}
