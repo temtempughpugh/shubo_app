@@ -19,6 +19,7 @@ interface TankAssignmentProps {
     configuredShuboData: ConfiguredShuboData[];
     getEnabledTanks: () => TankConfigData[];
     saveConfiguredShubo: (data: ConfiguredShuboData) => void;
+    setConfiguredShuboData: (data: ConfiguredShuboData[]) => void;  // ← 追加
     isLoading: boolean;
     loadError: string | null;
   };
@@ -122,25 +123,35 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
     const shuboType = assignment?.shuboType || '速醸';
     
     if (tankId) {
-      const configData = createConfiguredShuboData(shuboNumber, shuboType, tankId);
-      if (configData) {
-        dataContext.saveConfiguredShubo(configData);
-      }
+  const configData = createConfiguredShuboData(shuboNumber, shuboType, tankId);
+  
+  const shuboIndex = dataContext.shuboRawData.findIndex(s => s.shuboNumber === shuboNumber);
+  const isDualPrimary = dualShuboFlags[shuboIndex];
 
-      const shuboIndex = dataContext.shuboRawData.findIndex(s => s.shuboNumber === shuboNumber);
-      const isDualPrimary = dualShuboFlags[shuboIndex];
-
-      if (isDualPrimary && shuboIndex < dataContext.shuboRawData.length - 1) {
-        const nextShubo = dataContext.shuboRawData[shuboIndex + 1];
-        const nextAssignment = assignments.get(nextShubo.shuboNumber);
-        const nextShuboType = nextAssignment?.shuboType || '速醸';
-        
-        const nextConfigData = createConfiguredShuboData(nextShubo.shuboNumber, nextShuboType, tankId);
-        if (nextConfigData) {
-          dataContext.saveConfiguredShubo(nextConfigData);
-        }
-      }
+  // 2個酛の場合は両方まとめて保存（state競合を回避）
+  if (isDualPrimary && shuboIndex < dataContext.shuboRawData.length - 1) {
+    const nextShubo = dataContext.shuboRawData[shuboIndex + 1];
+    const nextAssignment = assignments.get(nextShubo.shuboNumber);
+    const nextShuboType = nextAssignment?.shuboType || '速醸';
+    
+    const nextConfigData = createConfiguredShuboData(nextShubo.shuboNumber, nextShuboType, tankId);
+    
+    // 両方を同時に保存
+    if (configData && nextConfigData) {
+      const currentData = dataContext.configuredShuboData;
+      const filtered = currentData.filter(s => 
+        !(s.shuboNumber === configData.shuboNumber && s.fiscalYear === configData.fiscalYear) &&
+        !(s.shuboNumber === nextConfigData.shuboNumber && s.fiscalYear === nextConfigData.fiscalYear)
+      );
+      dataContext.setConfiguredShuboData([...filtered, configData, nextConfigData]);
     }
+  } else {
+    // 1個酛の場合は通常保存
+    if (configData) {
+      dataContext.saveConfiguredShubo(configData);
+    }
+  }
+}
   }
 
   function createConfiguredShuboData(

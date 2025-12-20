@@ -131,14 +131,17 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
     setExpandedShubo(expandedShubo === shuboNumber ? null : shuboNumber);
   };
 
-  const getShuboRecords = (shubo: MergedShuboData): DailyRecordData[] => {
-    const existing = dataContext.getDailyRecords(shubo.primaryNumber);
-    
-    if (existing.length > 0) {
+ const getShuboRecords = (shubo: MergedShuboData): DailyRecordData[] => {
+  console.log(`currentFiscalYear: ${dataContext.currentFiscalYear}, shubo.fiscalYear: ${shubo.fiscalYear}`);
+  const existing = dataContext.getDailyRecords(shubo.primaryNumber);
+  console.log(`getShuboRecords for shubo ${shubo.primaryNumber}: existing ${existing.length} records`);
+  
+  if (existing.length > 0) {
       return existing;
     }
     
     const records = generateDailyRecords(shubo);
+    console.log(`Generated ${records.length} records for shubo ${shubo.primaryNumber}, maxShuboDays: ${shubo.maxShuboDays}`);
     records.forEach(record => {
       dataContext.updateDailyRecord(record);
     });
