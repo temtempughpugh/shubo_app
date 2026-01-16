@@ -59,9 +59,35 @@ export default function CSVUpdate({ dataContext, onClose }: CSVUpdateProps) {
       setIsProcessing(true);
       
       const text = await selectedFile.text();
-      const lines = text.split('\n').filter(line => line.trim());
-      const csvData = lines.map(line => line.split(','));
-      const newShuboData = parseShuboCSV(csvData);
+const lines = text.split('\n').filter(line => line.trim());
+// ダブルクォートで囲まれたカンマを正しく処理
+const csvData = lines.map(line => {
+  const values: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      values.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  
+  values.push(current.trim());
+  return values;
+});
+const newShuboData = parseShuboCSV(csvData);
 
       const updateDateObj = new Date(updateDate);
       updateDateObj.setHours(0, 0, 0, 0);
@@ -130,10 +156,36 @@ newShuboData.forEach(shubo => {
   try {
     setIsProcessing(true);
 
-    const text = await selectedFile.text();
-    const lines = text.split('\n').filter(line => line.trim());
-    const csvData = lines.map(line => line.split(','));
-    const newShuboData = parseShuboCSV(csvData);
+const text = await selectedFile.text();
+const lines = text.split('\n').filter(line => line.trim());
+// ダブルクォートで囲まれたカンマを正しく処理
+const csvData = lines.map(line => {
+  const values: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === ',' && !inQuotes) {
+      values.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  
+  values.push(current.trim());
+  return values;
+});
+const newShuboData = parseShuboCSV(csvData);
 
     const updateDateObj = new Date(updateDate);
     updateDateObj.setHours(0, 0, 0, 0);
