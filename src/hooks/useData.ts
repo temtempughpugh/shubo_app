@@ -76,10 +76,16 @@ const [dailyEnvironment, setDailyEnvironment] = useState<Record<string, { temper
 ])
 
     // データが空なら Supabase Storage からCSVインポート
-  const needsImport = 
-  shuboRawData.length === 0 || 
-  recipeRawData.length === 0
+  const { count: shuboCount } = await supabase
+  .from('shubo_raw_data')
+  .select('*', { count: 'exact', head: true })
 
+const { count: recipeCount } = await supabase
+  .from('shubo_recipe_data')
+  .select('*', { count: 'exact', head: true })
+
+const needsImport = (shuboCount === 0 || shuboCount === null) || 
+                    (recipeCount === 0 || recipeCount === null)
 
     if (needsImport) {
       console.log('初回起動: Supabase StorageからCSVをインポートします')
@@ -102,7 +108,11 @@ async function importFromSupabaseStorage() {
     const { parseShuboCSV, parseRecipeCSV, loadCSV, parseTankConversionCSV } = await import('../utils/dataUtils')
 
     // shubo.csv
-    if (shuboRawData.length === 0) {
+    const { count: shuboCount } = await supabase
+  .from('shubo_raw_data')
+  .select('*', { count: 'exact', head: true })
+
+if (shuboCount === 0 || shuboCount === null) {
       console.log('shubo.csv を読み込み中...')
       const { data: csvData } = await supabase.storage.from('csv-data').download('shubo.csv')
       if (csvData) {
@@ -144,7 +154,11 @@ const parsed = parseShuboCSV(parsedLines)
     }
 
     // shubo_sikomi.csv
-    if (recipeRawData.length === 0) {
+   const { count: recipeCount } = await supabase
+  .from('shubo_recipe_data')
+  .select('*', { count: 'exact', head: true })
+
+if (recipeCount === 0 || recipeCount === null) {
       console.log('shubo_sikomi.csv を読み込み中...')
       const { data: csvData } = await supabase.storage.from('csv-data').download('shubo_sikomi.csv')
       if (csvData) {
@@ -159,12 +173,11 @@ const parsed = parseShuboCSV(parsedLines)
     }
 
     // タンク設定初期化
-    // タンク設定初期化 - Supabaseから直接カウントを取得（stateは非同期で更新されるため）
     const { count: tankCount } = await supabase
-      .from('shubo_tank_config')
-      .select('*', { count: 'exact', head: true })
-    
-    if (tankCount === 0 || tankCount === null) {
+  .from('shubo_tank_config')
+  .select('*', { count: 'exact', head: true })
+
+if (tankCount === 0 || tankCount === null) {
       console.log('タンク設定を初期化中...')
       
       // ローカルからタンク変換データを読み込み
