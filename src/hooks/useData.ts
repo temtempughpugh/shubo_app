@@ -159,7 +159,12 @@ const parsed = parseShuboCSV(parsedLines)
     }
 
     // タンク設定初期化
-    if (tankConfigData.length === 0) {
+    // タンク設定初期化 - Supabaseから直接カウントを取得（stateは非同期で更新されるため）
+    const { count: tankCount } = await supabase
+      .from('shubo_tank_config')
+      .select('*', { count: 'exact', head: true })
+    
+    if (tankCount === 0 || tankCount === null) {
       console.log('タンク設定を初期化中...')
       
       // ローカルからタンク変換データを読み込み
