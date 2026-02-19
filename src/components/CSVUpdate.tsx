@@ -306,6 +306,9 @@ const newShuboData = parseShuboCSV(csvData);
     // ✅ localStorage削除 - Supabaseに保存
     await dataContext.saveCSVUpdateHistory(newHistory);
 
+    // Supabaseから全データを再読み込みしてstateを最新化
+    await dataContext.reloadData();
+
     alert('CSV更新が完了しました');
     setPreview(null);
     setSelectedFile(null);
