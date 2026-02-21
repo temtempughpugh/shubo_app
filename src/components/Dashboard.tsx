@@ -20,6 +20,7 @@ interface DashboardProps {
     dailyRecordsData: DailyRecordData[];
     getDailyRecords: (shuboNumber: number, fiscalYear?: number) => DailyRecordData[];
     updateDailyRecord: (record: DailyRecordData) => void;
+    bulkUpdateDailyRecords: (records: DailyRecordData[]) => Promise<void>;
     currentFiscalYear: number;
     dailyEnvironment: Record<string, { temperature: string; humidity: string }>;
     brewingPreparation: Record<string, any>;
@@ -141,12 +142,9 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
     }
     
     const records = generateDailyRecords(shubo);
-    console.log(`Generated ${records.length} records for shubo ${shubo.primaryNumber}, maxShuboDays: ${shubo.maxShuboDays}`);
-    records.forEach(record => {
-      dataContext.updateDailyRecord(record);
-    });
+    dataContext.bulkUpdateDailyRecords(records);
     
-    return dataContext.getDailyRecords(shubo.primaryNumber);
+    return records;
   };
 
   const handleUpdateRecord = (record: DailyRecordData) => {
@@ -389,9 +387,7 @@ const [localRecordUpdates, setLocalRecordUpdates] = useState<Map<string, Partial
         const existing = dataContext.getDailyRecords(shubo.primaryNumber);
         if (existing.length === 0) {
           const records = generateDailyRecords(shubo);
-          records.forEach(record => {
-            dataContext.updateDailyRecord(record);
-          });
+          dataContext.bulkUpdateDailyRecords(records);
         }
         return true;
       }
