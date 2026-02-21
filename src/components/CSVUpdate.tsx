@@ -206,7 +206,7 @@ const newShuboData = parseShuboCSV(csvData);
     const mergedShuboData = [...keptShuboData, ...updatedShuboData].sort((a, b) => a.shuboNumber - b.shuboNumber);
 
     // ✅ localStorage削除 - Supabaseのみに保存
-    dataContext.setShuboRawData(mergedShuboData);
+    await dataContext.setShuboRawData(mergedShuboData);
 
     // configured_dataのマージ処理
     const currentConfigured = dataContext.configuredShuboData;
@@ -286,7 +286,7 @@ const newShuboData = parseShuboCSV(csvData);
     const updatedWithDualInfo = updateDualShuboDisplayNames(mergedConfigured);
 
     // ✅ localStorage削除 - Supabaseのみに保存
-    dataContext.setConfiguredShuboData(updatedWithDualInfo);
+    await dataContext.setConfiguredShuboData(updatedWithDualInfo);
     
     
 
