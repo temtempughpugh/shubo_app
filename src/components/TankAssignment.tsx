@@ -48,7 +48,8 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
     if (currentAssignment?.tankId === tankId) return true;
 
     const shuboIndex = dataContext.shuboRawData.findIndex(s => s.shuboNumber === shuboNumber);
-    const isDualSecondary = shuboIndex > 0 && dualShuboFlags[shuboIndex - 1] && dualShuboFlags[shuboIndex];
+    const isDualSecondary = shuboIndex > 0 && dualShuboFlags[shuboIndex - 1] && dualShuboFlags[shuboIndex]
+      && dataContext.shuboRawData[shuboIndex - 1].shuboStartDate === dataContext.shuboRawData[shuboIndex].shuboStartDate;
 
     if (isDualSecondary) {
       const prevShubo = dataContext.shuboRawData[shuboIndex - 1];
@@ -318,9 +319,18 @@ export default function TankAssignment({ dataContext, onTankSettings }: TankAssi
     const isDualPrimary = dualShuboFlags[index];
     const isDualSecondary = index > 0 && dualShuboFlags[index - 1];
     
-    // 修正: 正しい2個酛判定
-    const actualPrimary = isDualPrimary && (!isDualSecondary);
-    const actualSecondary = isDualPrimary && isDualSecondary;
+    // 連続2個酛に対応: 前の酒母がPrimary（ペアの1番目）の場合のみSecondaryとする
+    // dualShuboFlagsのcontinueロジックにより、偶数indexがPrimary、奇数がSecondary
+    // ただし正確にはペアの開始位置を追跡する必要がある
+    let isActualSecondary = false;
+    if (isDualPrimary && isDualSecondary) {
+      // 前の酒母と同じ仕込み日ならセカンダリ
+      const prevShubo = dataContext.shuboRawData[index - 1];
+      isActualSecondary = prevShubo.shuboStartDate === shubo.shuboStartDate;
+    }
+    
+    const actualPrimary = isDualPrimary && !isActualSecondary;
+    const actualSecondary = isActualSecondary;
     
     let dualLabel = '';
     if (actualPrimary) {
