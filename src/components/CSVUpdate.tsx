@@ -290,10 +290,31 @@ const newShuboData = parseShuboCSV(csvData);
     
     
 
-    // brewing_preparationとdischarge_scheduleの削除
-    // ✅ localStorage削除 - Supabaseから削除
-    await dataContext.deleteBrewingPreparationByShuboKeys(preview.toUpdate);
-    await dataContext.deleteDischargeScheduleByShuboKeys(preview.toUpdate);
+// brewing_preparationとdischarge_scheduleの削除（日付が変わった酒母のみ）
+    const dateChangedKeys = preview.toUpdate.filter(key => {
+      const { shuboNumber, fiscalYear } = parseShuboKey(key);
+      const existing = currentConfigured.find(c => 
+        c.shuboNumber === shuboNumber && c.fiscalYear === fiscalYear
+      );
+      if (!existing) return false; // 新規はデータないので削除不要
+      
+      const newRaw = newShuboData.find(s => 
+        s.shuboNumber === shuboNumber && s.fiscalYear === fiscalYear
+      );
+      if (!newRaw) return false;
+      
+      const newStart = convertExcelDateToJs(parseFloat(newRaw.shuboStartDate));
+      const newEnd = convertExcelDateToJs(parseFloat(newRaw.shuboEndDate));
+      const oldStart = new Date(existing.shuboStartDate);
+      const oldEnd = new Date(existing.shuboEndDate);
+      
+      return newStart.getTime() !== oldStart.getTime() || newEnd.getTime() !== oldEnd.getTime();
+    });
+    
+    if (dateChangedKeys.length > 0) {
+      await dataContext.deleteBrewingPreparationByShuboKeys(dateChangedKeys);
+      await dataContext.deleteDischargeScheduleByShuboKeys(dateChangedKeys);
+    }
 
     // 更新履歴の保存
     const newHistory: CSVUpdateHistory = {
