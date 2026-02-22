@@ -740,9 +740,50 @@ async function saveAnalysisSettings(settings: AnalysisSettings) {
     saveConfiguredShuboData(updated)
   }
 
-  function updateDailyRecord(record: DailyRecordData) {
+function updateDailyRecord(record: DailyRecordData) {
     const updated = [...dailyRecordsData.filter(r => !(r.shuboNumber === record.shuboNumber && r.fiscalYear === record.fiscalYear && r.dayNumber === record.dayNumber)), record]
     saveDailyRecordsData(updated)
+  }
+
+  async function addDailyRecordsBulk(newRecords: DailyRecordData[]) {
+    if (newRecords.length === 0) return
+
+    const toInsert = newRecords.filter(newRec =>
+      !dailyRecordsData.some(r =>
+        r.shuboNumber === newRec.shuboNumber &&
+        r.fiscalYear === newRec.fiscalYear &&
+        r.dayNumber === newRec.dayNumber
+      )
+    )
+
+    if (toInsert.length === 0) return
+
+    const { error } = await supabase.from('shubo_daily_records').insert(toInsert.map(r => ({
+      shubo_number: r.shuboNumber,
+      fiscal_year: r.fiscalYear,
+      record_date: r.recordDate instanceof Date ? r.recordDate.toISOString().split('T')[0] : new Date(r.recordDate).toISOString().split('T')[0],
+      day_number: r.dayNumber,
+      day_label: r.dayLabel,
+      time_slot: r.timeSlot,
+      temperature: r.temperature,
+      temperature1: r.temperature1,
+      temperature2: r.temperature2,
+      temperature3: r.temperature3,
+      temperature_after_heating: r.temperatureAfterHeating,
+      baume: r.baume,
+      acidity: r.acidity,
+      alcohol: r.alcohol,
+      memo: r.memo,
+      is_analysis_day: r.isAnalysisDay,
+      updated_at: new Date().toISOString()
+    })))
+
+    if (error) {
+      console.error('日別記録一括追加エラー:', error)
+      throw error
+    }
+
+    setDailyRecordsDataState(prev => [...prev, ...toInsert])
   }
 
   function getDailyRecords(shuboNumber: number, fiscalYear?: number) {
@@ -781,6 +822,7 @@ async function saveAnalysisSettings(settings: AnalysisSettings) {
   saveConfiguredShubo, 
   removeConfiguredShubo, 
   updateDailyRecord, 
+  addDailyRecordsBulk,
   getDailyRecords,
   reloadData: loadAllData,
   analysisSettings,
