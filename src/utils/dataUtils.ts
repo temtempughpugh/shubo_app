@@ -406,12 +406,13 @@ export function createMergedShuboData(
 ): MergedShuboData[] {
   const dualMap = checkDualShuboFromConfigured(configuredList);
   const mergedList: MergedShuboData[] = [];
-  const processed = new Set<number>();
+  const processed = new Set<string>();
   
   const sortedList = [...configuredList].sort((a, b) => a.shuboNumber - b.shuboNumber);
   
   for (const shubo of sortedList) {
-    if (processed.has(shubo.shuboNumber)) continue;
+    const shuboKey = `${shubo.shuboNumber}-${shubo.fiscalYear}`;
+    if (processed.has(shuboKey)) continue;
     
     const dualInfo = dualMap.get(shubo.shuboNumber);
     
@@ -443,8 +444,8 @@ export function createMergedShuboData(
       };
       
       mergedList.push(mergedData);
-      processed.add(shubo.shuboNumber);
-      processed.add(secondary.shuboNumber);
+      processed.add(`${shubo.shuboNumber}-${shubo.fiscalYear}`);
+      processed.add(`${secondary.shuboNumber}-${secondary.fiscalYear}`);
       
     } else if (!dualInfo?.isDual) {
       const mergedData: MergedShuboData = {
@@ -464,7 +465,7 @@ export function createMergedShuboData(
       };
       
       mergedList.push(mergedData);
-      processed.add(shubo.shuboNumber);
+      processed.add(shuboKey);
     }
   }
   

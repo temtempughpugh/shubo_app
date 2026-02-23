@@ -226,7 +226,12 @@ const newShuboData = parseShuboCSV(csvData);
   if (!newRaw) return null;
   
   if (existing) {
-    // 既存データを更新
+    // レシピを再検索（仕込規模が変わった場合に対応）
+    const updatedRecipe = dataContext.recipeRawData.find(r => 
+      r.shuboType === existing.shuboType && 
+      r.recipeBrewingScale === newRaw.brewingScale
+    );
+    
     return {
       ...existing,
       shuboStartDate: convertExcelDateToJs(parseFloat(newRaw.shuboStartDate)),
@@ -234,6 +239,16 @@ const newShuboData = parseShuboCSV(csvData);
       shuboDays: newRaw.shuboDays,
       fiscalYear: newRaw.fiscalYear,
       originalData: newRaw,
+      ...(updatedRecipe ? {
+        recipeData: {
+          totalRice: updatedRecipe.recipeTotalRice,
+          steamedRice: updatedRecipe.steamedRice,
+          kojiRice: updatedRecipe.kojiRice,
+          water: updatedRecipe.water,
+          measurement: updatedRecipe.measurement,
+          lacticAcid: updatedRecipe.lacticAcid
+        }
+      } : {})
     };
   }
   
