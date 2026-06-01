@@ -293,9 +293,22 @@ if (tankCount === 0 || tankCount === null) {
   }
 
   async function loadDailyRecordsData() {
-    const { data, error } = await supabase.from('shubo_daily_records').select('*').order('record_date')
-    if (error) throw error
-    setDailyRecordsDataState((data || []).map((r: any) => ({
+    const pageSize = 1000
+    let from = 0
+    let allRows: any[] = []
+    while (true) {
+      const { data, error } = await supabase
+        .from('shubo_daily_records')
+        .select('*')
+        .order('record_date')
+        .range(from, from + pageSize - 1)
+      if (error) throw error
+      const rows = data || []
+      allRows = allRows.concat(rows)
+      if (rows.length < pageSize) break   // 最後のページ（1000未満）で終了
+      from += pageSize
+    }
+    setDailyRecordsDataState(allRows.map((r: any) => ({
       shuboNumber: r.shubo_number, fiscalYear: r.fiscal_year, recordDate: new Date(r.record_date),
       dayNumber: r.day_number || 0, dayLabel: r.day_label || '', timeSlot: r.time_slot || '',
       temperature: r.temperature, temperature1: r.temperature1, temperature2: r.temperature2, temperature3: r.temperature3,
@@ -303,7 +316,6 @@ if (tankCount === 0 || tankCount === null) {
       memo: r.memo || '', isAnalysisDay: r.is_analysis_day || false
     })))
   }
-
   async function saveDailyRecordsData(data: DailyRecordData[]) {
     const { error } = await supabase.from('shubo_daily_records').upsert(data.map(r => ({
       shubo_number: r.shuboNumber, fiscal_year: r.fiscalYear, record_date: r.recordDate.toISOString().split('T')[0],
